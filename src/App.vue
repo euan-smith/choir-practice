@@ -6,8 +6,29 @@ export default {
   },
   data(){
     return {
-      score:null,
       error:null,
+      title:'',
+      scores:[],
+      index:0,
+    }
+  },
+  computed:{
+    score(){
+      const {scores, index} = this;
+      return scores && scores[index] || {parts:[],bars:[]};
+    },
+    fullTitle(){
+      const {title, scores, index} = this;
+      const rtn=[title];
+      if (scores?.[index]?.subtitle) rtn.push(scores[index].subtitle);
+      return rtn.join(' - ');
+    },
+    showNext(){
+      console.log(this.scores.length, this.index);
+      return this.scores.length > this.index + 1;
+    },
+    showPrev(){
+      return this.index>0;
     }
   },
   async mounted(){
@@ -15,18 +36,28 @@ export default {
     const q = window.location.search.slice(1).split('&').map(s=>s.split('=')).reduce((o,d)=>Object.assign(o,{[d[0]]:d[1]}),{});
     if (!q.score) return this.error = ["Unable to load a score - none specified","URL should include '?score=<score name>'"];
     try{
-    this.score = await fetch('/'+q.score+'.json').then(r=>r.json());
+      const data = await fetch('/'+q.score+'.json').then(r=>r.json());
+      if (data.parts && data.bars){
+        this.title = data.title;
+        this.scores = [{
+          subtitle:'',
+          ...data
+        }]
+      } else if (data.scores && data.title){
+        this.title = data.title;
+        this.scores = data.scores;
+      } else this.error = [`Invlid score "${q.score}"`];
     } catch(e){
       this.error = [`Unable to load score "${q.score}"`];
     }
-  }
+  },
 }
 </script>
 
 <template>
   <div class=container>
     <div class=border>
-      <mixer class=mixer v-if=score :parts=score.parts :title=score.title :bars=score.bars />
+      <mixer class=mixer v-if=score :parts=score.parts :title=fullTitle :bars=score.bars :show-next=showNext :show-prev=showPrev @next=++index @prev=--index />
       <div v-else-if=error class=error>
         <h1 v-if=error[0]>{{error[0]}}</h1>
         <p :key=i v-for="(line,i) of error.slice(1)">{{line}}</p>
@@ -39,6 +70,11 @@ export default {
 @font-face {
   font-family: Lato;
   src: url(/Lato-Light.ttf);
+}
+html, body{
+  width:100%;
+  height:100%;
+  overflow: hidden;
 }
 * {
   box-sizing: border-box;

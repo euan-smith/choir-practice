@@ -17,7 +17,15 @@ export default {
     bars:{
       type:Array,
       default:[]
-    }
+    },
+    showNext:{
+      type:Boolean,
+      default:false
+    },
+    showPrev:{
+      type:Boolean,
+      default:false
+    },
   },
   watch:{
     parts(){
@@ -88,23 +96,24 @@ export default {
           .then(b=>ac.decodeAudioData(b))
         )
       );
-      this.tracks = decoded.map(buffer=>({
-        buffer,
+      if (!this.tracks || this.tracks.length !== decoded.length) this.tracks=new Array(decoded.length);
+      for(let n = 0; n<decoded.length; ++n){
+        this.tracks[n] = {
         vol:1,
         solo:false,
         mute:false,
-        source:null,
+        ...this.tracks[n],
+        buffer:decoded[n],
         anal: new AnalyserNode(ac,{fftSize:256}),
-        gainNode: new GainNode(ac),
-        tempo:1,
+        gainNode: new GainNode(ac,{gain:this?.tracks?.[n]?.vol || 1}),
+        source:null,
         offset:0,
-      }));
-      // this.pitchShift = new PitchBendNode(this.ac);
-      // this.pitchShift.connect(this.ac.destination);
+        }
+      }
       for (let track of this.tracks){
-        // track.anal.connect(track.gainNode).connect(this.pitchShift);
         track.anal.connect(track.gainNode).connect(this.ac.destination);
       }
+      if (this.beatIdx && this.beatIdx<this.beats.length) this.currentTime = this.beats[this.beatIdx][0]
       this.loading = false;
     },
     setVol(e,i){
@@ -139,21 +148,12 @@ export default {
         t.gainNode.gain.value = isSolo && !t.solo || t.mute ? 0 : t.vol * this.mainVol;
       });
     },
-    setTempo(e){
-      this.tempo=e.target.value;
-      this.tracks.forEach(t=>{
-        t.source.playbackRate.value = this.tempo;
-        //t.source.detune.value = Math.log2(this.tempo) * -1200;
-      });
-      // this.pitchShift.transpose = Math.log2(this.tempo) * -12;
-    },
     async play(){
       if (this.playing) return
       const {ac,tracks} = this;
       for (let track of tracks){
         track.source = new AudioBufferSourceNode(ac, {
           buffer:track.buffer,
-          playbackRate:this.tempo,
         });
         track.source.connect(track.anal);
         track.source.start(0,this.currentTime);
@@ -198,6 +198,14 @@ export default {
         track.source.stop();
         track.source = null;
       }
+    },
+    next(){
+      this.pause();
+      this.$emit('next');
+    },
+    prev(){
+      this.pause();
+      this.$emit('prev');
     }
   }
 }
@@ -208,7 +216,7 @@ export default {
  * +--100px----+-----------+--50-+-50--+50-+50-+--50-+---125----+25+--100---+-50-+
  * |  PARTS    |  mute o   | Title                                               | 60px 1
  * |           +-----------+-----+-----+-------------+-------------+-------------+
- * |           |  solo o   |Main |Tempo|    BAR                    |     BEAT    | 30px 2
+ * |           |  solo o   |Main |Metro|    BAR                    |     BEAT    | 30px 2
  * |           +-----+-----+     |     |             |             |             |
  * |           |     |     |     |     |             |             |             | 80px 3
  * |           |     |     |     |     |             |             |             |
@@ -269,7 +277,7 @@ export default {
       <label class=tempo style="opacity:0.5">
         <div class="m-title"> Tempo </div>
         <div class=m-ind>{{(tempo*100).toFixed(0)}}</div>
-        <volume class=slider thumb="blue" min=0.5 max=1.5 step=0.001 value=1 @input="setTempo" disabled />
+        <volume class=slider thumb="blue" min=0.5 max=1.5 step=0.001 value=1  disabled />
       </label>
       <div class=bar-title>Bar / Repeat</div>
       <div class=bar-background />
@@ -284,6 +292,8 @@ export default {
       <label class=timeline>
         <input class=time ref=time type=range min=0 max=1 step=0.001 value=0 @input="setTime">
       </label>
+      <div v-if="showNext" class="next material-icons" @click="next">skip_next</div>
+      <div v-if="showPrev" class="prev material-icons" @click="prev">skip_previous</div>
     </div>
   </div>
 </template>
@@ -344,7 +354,7 @@ export default {
 
   .mixer>.controls{
     display:grid;
-    grid-template:60px 30px 90px 30px 90px 60px / 60px 60px 50px 50px 50px 125px 0px 175px 0px;
+    grid-template:60px 30px 90px 30px 90px 60px / 60px 60px 50px 225px 115px 60px;
     width:570px;
     height:360px;
     background:#333;
@@ -365,22 +375,31 @@ export default {
     left:50%;
     transform:translate(-50%,-50%);
     font-size:56px;
-
+  }
+  .controls>.next{
+    grid-area: 1/6/2/7;
+    font-size:56px;
+    cursor:pointer;
+  }
+  .controls>.prev{
+    grid-area: 1/1/2/2;
+    font-size:56px;
+    cursor:pointer;
   }
   .controls>.timeline{
-    padding:12px 0;
-    grid-area:6/4/7/9;
+    padding:14px 0;
+    grid-area:6/4/7/-1;
   }
   .controls>.title{
-    grid-area:1/1/2/10;
+    grid-area:1/2/2/-2;
     font-size:40px;
   }
   .controls>.bar-title{
-    grid-area:2/3/3/8;
+    grid-area:2/3/3/-3;
     font-size: 20px;
   }
   .controls>.bar-background{
-    grid-area:3/3/4/8;
+    grid-area:3/3/4/-3;
     border: #333 10px solid;
     border-radius:20px;
     font-size: 55px;
@@ -388,40 +407,40 @@ export default {
   }
   .controls>.bar{
     display:relative;
-    grid-area:3/3/4/8;
+    grid-area:3/3/4/-3;
     font-size: 55px;
     padding-top:8px;
     color:#afa;
   }
   .controls>.beat-title{
-    grid-area:2/8/3/10;
+    grid-area:2/-3/3/-1;
     font-size: 20px;
   }
   .controls>.beat-background{
-    grid-area:3/8/6/10;
+    grid-area:3/-3/6/-1;
     border: #333 10px solid;
     border-radius:20px;
     background:#272222;
   }
   .controls>.beat{
-    grid-area:3/8/6/10;
+    grid-area:3/-3/6/-1;
     color:#faa;
     font-size: 130px;
     padding-top:24px;
   }
   .controls>.time-title{
-    grid-area:4/3/5/8;
+    grid-area:4/3/5/-3;
     font-size: 20px;
   }
   .controls>.time-background{
-    grid-area:5/3/6/8;
+    grid-area:5/3/6/-3;
     border: #333 10px solid;
     border-radius:20px;
     font-size: 55px;
     background:#222227;
   }
   .controls>.time{
-    grid-area:5/3/6/8;
+    grid-area:5/3/6/-3;
     font-size: 55px;
     padding-top:8px;
     color:#aaf;

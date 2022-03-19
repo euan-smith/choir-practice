@@ -21,6 +21,7 @@
     },
     methods:{
       input(e){
+        e.preventDefault();
         this.$emit('input',e);
       },
       resize(){
@@ -67,6 +68,7 @@
     background-size:calc( 100% - 30px) 100%;
     background-position:center;
     -webkit-appearance: none;
+    -webkit-user-drag: none;
   }
   input.vol:focus {
   outline: none;
