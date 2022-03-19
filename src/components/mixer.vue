@@ -280,7 +280,7 @@ export default {
       <div class=time-title>Time</div>
       <div class=time-background />
       <div class=time>{{currentTime.toFixed(2)}}</div>
-      <div class=play><span v-if=playing @click="pause">&#x23f8;</span><span v-else @click="play">&#x23f5;</span></div>
+      <div class=play><span v-if=playing @click="pause" class="material-icons">pause</span><span v-else @click="play" class="material-icons">play_arrow</span></div>
       <label class=timeline>
         <input class=time ref=time type=range min=0 max=1 step=0.001 value=0 @input="setTime">
       </label>
@@ -355,11 +355,17 @@ export default {
     /* border: #a00 1px solid; */
   }
   .controls>.play{
-    font-family: Arial, Helvetica, sans-serif;
     grid-area: 6/3/7/4;
-    font-size:56px;
+    position:relative;
     cursor: pointer;
-    transform:translate(0,-16px)
+  }
+  .play>.material-icons{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    font-size:56px;
+
   }
   .controls>.timeline{
     padding:12px 0;
