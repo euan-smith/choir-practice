@@ -1,8 +1,10 @@
 
 <script>
-import PitchBendNode from './PitchBendNode';
-
+import Volume from "./volume.vue";
 export default {
+  components:{
+    Volume
+  },
   props:{
     parts:{
       type:Array,
@@ -232,8 +234,8 @@ export default {
     <div class=loading v-if=loading>
       <span>LOADING...</span>
     </div>
-    <div class=track v-for="(part,i) of parts" :key=i>
-      <div class=mute>
+    <div class=track v-for="(part,i) of parts" :key="i" >
+      <div class=mute >
         <label>mute
           <input type=checkbox @change="e=>setMute(e,i)">
           <div class=light></div>
@@ -253,21 +255,21 @@ export default {
         </div>
       </div>
       <div class=v-ind>{{((tracks[i] && tracks[i].vol || 1)*100).toFixed(0)}} </div>
-      <label class=volume>
-        <input class=vol type=range min=0 max=1 step=0.01 @input="e=>setVol(e,i)">
+      <label class="volume">
+        <volume class=slider min="0" max="1" step="0.01" @input="e=>setVol(e,i)"/>
       </label>
     </div>
     <div class=controls>
       <div class=title> {{title}} </div>
       <label class=main>
-        Main
+        <div class=m-title>Main</div>
         <div class=m-ind>{{(mainVol*100).toFixed(0)}}</div>
-        <input class=vol type=range min=0 max=1 step=0.001 value=1 @input="setMain">
+        <volume class=slider thumb="red" min=0 max=1 step=0.001 value=1 @input="setMain" />
       </label>
       <label class=tempo style="opacity:0.5">
-        Tempo
+        <div class="m-title"> Tempo </div>
         <div class=m-ind>{{(tempo*100).toFixed(0)}}</div>
-        <input class=vol type=range min=0.5 max=1.5 step=0.001 value=1 @input="setTempo" disabled>
+        <volume class=slider thumb="blue" min=0.5 max=1.5 step=0.001 value=1 @input="setTempo" disabled />
       </label>
       <div class=bar-title>Bar / Repeat</div>
       <div class=bar-background />
@@ -278,9 +280,9 @@ export default {
       <div class=time-title>Time</div>
       <div class=time-background />
       <div class=time>{{currentTime.toFixed(2)}}</div>
-      <div class=play><span v-if=playing @click=pause>&#x23f8;</span><span v-else @click=play>&#x23f5;</span></div>
+      <div class=play><span v-if=playing @click="pause">&#x23f8;</span><span v-else @click="play">&#x23f5;</span></div>
       <label class=timeline>
-        <input class=time ref=time type=range min=0 max=1 step=0.001 value=0 @input=setTime>
+        <input class=time ref=time type=range min=0 max=1 step=0.001 value=0 @input="setTime">
       </label>
     </div>
   </div>
@@ -353,6 +355,7 @@ export default {
     /* border: #a00 1px solid; */
   }
   .controls>.play{
+    font-family: Arial, Helvetica, sans-serif;
     grid-area: 6/3/7/4;
     font-size:56px;
     cursor: pointer;
@@ -417,34 +420,36 @@ export default {
     padding-top:8px;
     color:#aaf;
   }
-
-  .controls>.main{
-    grid-area:2/1/9/2;
-    position:relative;
-  }
   .controls>.tempo{
     grid-area:2/2/9/3;
-    position:relative;
   }
-  .main .m-ind, .tempo .m-ind{
-    position: absolute;
+  .controls>.main{
+    grid-area:2/1/9/2;
+  }
+  .controls>.main, .controls>.tempo{
+    position:relative;
+    display:flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .main>.m-title, .tempo>.m-title{
+    flex: 0 0 1em;
+    margin-bottom:0.2em;
+  }
+  .main>.m-ind, .tempo>.m-ind{
+    flex: 0 0 1em;
     width:42px;
-    top:25px;
-    height:20px;
-    left:8px;
     background:#272727;
     border-radius:5px;
+    margin: 0.2em 0;
   }
-  .main input, .tempo input{
-    position:absolute;
-    top:0;
-    left:0;
-    display:block;
-    width:300px;
-    height:24px;
-    padding:2px;
-    transform-origin: 168px 162px;
-    transform:rotate(-90deg);
+  .main>.slider, .tempo>.slider{
+    flex: 1 1 0;
+    position:relative;
+    max-width:40px;
+    width:80%;
+    margin: 0.3em 0 0.5em;
   }
 
   .track>.mute{
@@ -467,7 +472,7 @@ export default {
     color:white;
     font-size:20px;
   }
-  .track label{
+  .track>.solo label, .track>.mute label{
     display:flex;
     flex-direction:row;
     justify-content: space-around;
@@ -518,143 +523,17 @@ export default {
   .track>.volume{
     grid-area:4/2/5/3;
     position:relative;
+    padding:4px 2px 9px;
   }
-  input.vol{
-    position:absolute;
-    top:0;
-    left:0;
-    display:block;
-    width:240px;
-    height:24px;
-    padding:2px;
-    transform-origin: 122px 120px;
-    transform:rotate(-90deg);
+  .volume>.slider{
+    width:100%;
+    height:100%;
   }
-  .controls input.vol{
-    transform-origin: 149.5px 142.5px;
-  }
-
-
 
   .list{
     display: flex;
     flex-direction: column;
   }
-
-input.vol{
-  background: repeating-linear-gradient(90deg, #333, #333 16px, #555 17px, #333 18px, #333 20.6px);
-  height:40px;
-  border:none;
-  -webkit-appearance: none;
-}
-
-input.vol:focus {
-  outline: none;
-  border:none;
-}
-input.vol::-webkit-slider-runnable-track {
-  -webkit-appearance: none;
-  width: 100%;
-  height: 8px;
-  cursor: pointer;
-  animate: 0.2s;
-  box-shadow: none;
-  background: #111;
-  border-radius: 0;
-  border: none;
-}
-input.vol:focus::-webkit-slider-runnable-track {
-  background: #111;
-}
-input.vol::-moz-range-track {
-  width: 100%;
-  height: 8px;
-  cursor: pointer;
-  animate: 0.2s;
-  box-shadow: none;
-  background: #111;
-  border-radius: 0;
-  border: none;
-}
-input.vol::-ms-track {
-  width: 100%;
-  height: 8px;
-  cursor: pointer;
-  animate: 0.2s;
-  background: transparent;
-  border-color: transparent;
-  color: transparent;
-}
-input.vol::-ms-fill-lower {
-  background: #111;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-}
-input.vol::-ms-fill-upper {
-  background: #111;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-}
-input.vol:focus::-ms-fill-lower {
-  background: #111;
-}
-input.vol:focus::-ms-fill-upper {
-  background: #111;
-}
-
-input.vol::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  transform: translate(0,2.5px);
-  box-shadow: none;
-  border: none;
-  height: 25px;
-  width: 30px;
-  border-radius: 3px;
-  background: linear-gradient(90deg, #555 0%, #555 15%, #aaa 16%, #888 17%, #666 47%, #bbb 48%, #bbb 52%, #666 53%, #444 83%, #aaa 64%, #888 65%, #888 100%);
-  cursor: pointer;
-  -webkit-appearance: none;
-  margin-top: -11.5px;
-}
-input.vol::-moz-range-thumb {
-  box-shadow: none;
-  border: none;
-  height: 25px;
-  width: 30px;
-  border-radius: 3px;
-  background: linear-gradient(90deg, #555 0%, #555 15%, #aaa 16%, #888 17%, #666 47%, #bbb 48%, #bbb 52%, #666 53%, #444 83%, #aaa 64%, #888 65%, #888 100%);
-  cursor: pointer;
-}
-input.vol::-ms-thumb {
-  margin-top: 1px;
-  border: none;
-  height: 25px;
-  width: 30px;
-  border-radius: 3px;
-  background: linear-gradient(90deg, #555 0%, #555 15%, #aaa 16%, #888 17%, #666 47%, #bbb 48%, #bbb 52%, #666 53%, #444 83%, #aaa 64%, #888 65%, #888 100%);
-  cursor: pointer;
-}
-
-.main>input.vol::-webkit-slider-thumb {
-  background: linear-gradient(90deg, #744 0%, #744 15%, #c99 16%, #a77 17%, #855 47%, #daa 48%, #daa 52%, #855 53%, #633 83%, #c99 64%, #a77 65%, #a77 100%);
-}
-.main>input.vol::-moz-range-thumb {
-  background: linear-gradient(90deg, #744 0%, #744 15%, #c99 16%, #a77 17%, #855 47%, #daa 48%, #daa 52%, #855 53%, #633 83%, #c99 64%, #a77 65%, #a77 100%);
-}
-.main>input.vol::-ms-thumb {
-  background: linear-gradient(90deg, #744 0%, #744 15%, #c99 16%, #a77 17%, #855 47%, #daa 48%, #daa 52%, #855 53%, #633 83%, #c99 64%, #a77 65%, #a77 100%);
-}
-
-.tempo>input.vol::-webkit-slider-thumb {
-  background: linear-gradient(90deg, #447 0%, #447 15%, #99c 16%, #77a 17%, #558 47%, #aad 48%, #aad 52%, #558 53%, #336 83%, #99c 64%, #77a 65%, #77a 100%);
-}
-.tempo>input.vol::-moz-range-thumb {
-  background: linear-gradient(90deg, #447 0%, #447 15%, #99c 16%, #77a 17%, #558 47%, #aad 48%, #aad 52%, #558 53%, #336 83%, #99c 64%, #77a 65%, #77a 100%);
-}
-.tempo>input.vol::-ms-thumb {
-  background: linear-gradient(90deg, #447 0%, #447 15%, #99c 16%, #77a 17%, #558 47%, #aad 48%, #aad 52%, #558 53%, #336 83%, #99c 64%, #77a 65%, #77a 100%);
-}
 
 input.time{
   -webkit-appearance: none;
@@ -693,8 +572,6 @@ input.time::-ms-thumb {
   cursor: pointer;
   background: linear-gradient(90deg, #88d, #88d 20%, #aaf 40%, #88d 40%, #88d 60%, #66b 60%, #88d 80%, #88d 100%)
 }
-
-
 
 input.time::-moz-range-track {
   width: 100%;
