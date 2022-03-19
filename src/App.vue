@@ -24,7 +24,6 @@ export default {
       return rtn.join(' - ');
     },
     showNext(){
-      console.log(this.scores.length, this.index);
       return this.scores.length > this.index + 1;
     },
     showPrev(){

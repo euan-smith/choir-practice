@@ -33,6 +33,14 @@ export default {
     },
     bars(){
       this.parseBars();
+    },
+    newbar(){
+      if (this.newbar === null || this.newbar === '') return;
+      if (/^([0-9]+\/)?[0-9]*$/.test(this.newbar)){
+        this.lastNewbar=this.newbar;
+      } else {
+        setTimeout(()=>this.newbar = this.lastNewbar);
+      }
     }
   },
   mounted(){
@@ -52,7 +60,9 @@ export default {
       beatIdx:0,
       mainVol:1,
       tempo:1,
-      duration:10
+      duration:10,
+      newbar:null,
+      lastNewbar:'',
     }
   },
   computed:{
@@ -75,7 +85,7 @@ export default {
         if (b.tempo) ({tempo} = b);
         if (b.timeSig) ({timeSig} = b);
         for (let n=0; n<b.beats; n++){
-          beats.push([time, bar, beat, repeat]);
+          beats.push([time, bar, beat, repeat, beats.length]);
           if (++beat > timeSig){
             ++bar;
             beat-=timeSig;
@@ -185,11 +195,6 @@ export default {
       }
 
     },
-    rewind(){
-      if (this.playing) this.pause();
-      this.currentTime=0;
-      this.beatIdx=0;
-    },
     pause(){
       if (!this.playing) return;
       this.playing=false;
@@ -206,7 +211,31 @@ export default {
     prev(){
       this.pause();
       this.$emit('prev');
-    }
+    },
+    editBar(){
+      this.pause();
+      this.lastNewbar = this.newbar='';
+      setTimeout(()=>{
+        this.$refs.newbar.focus();
+      },50);
+    },
+    editBarDone(){
+      const bar = this.newbar;
+      this.newbar=null;
+      if (!bar) return;
+      const spec = bar.split('/').map(s=>parseInt(s));
+      spec.push(1);
+      // first find all bars that meet the bar spec
+      const beats = this.beats.filter(b=>b[1]===spec[0]&&b[2]===1)
+      if (beats.legnth===0) return;
+      const rpt = beats.filter(b=>b[3]===spec[1]);
+      this.beatIdx = rpt?.[0]?.[4] || beats?.[0]?.[4] || this.beatIdx;
+      this.currentTime = this.beats[this.beatIdx][0];
+      this.$refs.time.value = this.currentTime / this.duration;
+    },
+    editBarQuit(){
+      this.newbar=null;
+    },
   }
 }
 
@@ -281,7 +310,12 @@ export default {
       </label>
       <div class=bar-title>Bar / Repeat</div>
       <div class=bar-background />
-      <div class=bar>{{barInd}}</div>
+
+      <div v-if="newbar===null" class=bar @click="editBar">{{barInd}}</div>
+      <template v-else>
+        <input type="text" ref="newbar" v-model="newbar" class="bar" @blur="editBarDone" @keyup.enter="editBarDone" @keyup.escape="editBarQuit">
+      </template>
+
       <div class=beat-title>Beat</div>
       <div class=beat-background />
       <div class=beat v-if=beats[beatIdx]>{{beats[beatIdx][2]}}</div>
@@ -411,6 +445,16 @@ export default {
     font-size: 55px;
     padding-top:8px;
     color:#afa;
+  }
+  .controls>input.bar{
+    font-family: Lato;
+    background:#0000;
+    border:none;
+    padding-top:0px;
+    margin-top:-8px;
+  }
+  input.bar:focus{
+    outline:none;
   }
   .controls>.beat-title{
     grid-area:2/-3/3/-1;
