@@ -99,11 +99,15 @@ export default {
     async load(){
       const {ac} = this;
       this.loading = true;
+      const start=performance.now();
       const decoded = await Promise.all(
         this.parts.map(
           part=>fetch(part.url)
+          .then(a=>(console.log(part.name,'fetch',performance.now()-start),a))
           .then(r=>r.arrayBuffer())
+          .then(a=>(console.log(part.name,'ab',performance.now()-start),a))
           .then(b=>ac.decodeAudioData(b))
+          .then(a=>(console.log(part.name,'decoded',performance.now()-start),a))
         )
       );
       if (!this.tracks || this.tracks.length !== decoded.length) this.tracks=new Array(decoded.length);
@@ -161,6 +165,7 @@ export default {
     async play(){
       if (this.playing) return
       const {ac,tracks} = this;
+      await ac.resume();
       for (let track of tracks){
         track.source = new AudioBufferSourceNode(ac, {
           buffer:track.buffer,
@@ -646,7 +651,6 @@ input.time::-moz-range-track {
   width: 100%;
   height: 8px;
   cursor: pointer;
-  animate: 0.2s;
   box-shadow: none;
   background: #111;
   border-radius: 12px;
@@ -658,7 +662,6 @@ input.time::-webkit-slider-runnable-track {
   width: 100%;
   height: 8px;
   cursor: pointer;
-  animate: 0.2s;
   box-shadow: none;
   background: #111;
   border-radius: 12px;
@@ -672,7 +675,6 @@ input.time::-ms-track {
   width: 100%;
   height: 8px;
   cursor: pointer;
-  animate: 0.2s;
   box-shadow: none;
   background: #111;
   border-radius: 12px;

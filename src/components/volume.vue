@@ -79,7 +79,6 @@ input::-webkit-slider-runnable-track {
   width: 100%;
   height: 8px;
   cursor: pointer;
-  animate: 0.2s;
   box-shadow: none;
   background: #111;
   border-radius: 0;
