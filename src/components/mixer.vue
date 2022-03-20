@@ -44,7 +44,6 @@ export default {
     }
   },
   mounted(){
-   this.ac = new AudioContext();
    this.load();
    this.parseBars();
   },
@@ -63,6 +62,7 @@ export default {
       duration:10,
       newbar:null,
       lastNewbar:'',
+      decoded:[]
     }
   },
   computed:{
@@ -97,29 +97,38 @@ export default {
       this.duration = time;
     },
     async load(){
-      const {ac} = this;
+      this.ac=null;
+      const ac = new AudioContext();
       this.loading = true;
-      const start=performance.now();
-      const decoded = await Promise.all(
+      // const start=performance.now();
+      this.decoded = await Promise.all(
         this.parts.map(
           part=>fetch(part.url)
-          .then(a=>(console.log(part.name,'fetch',performance.now()-start),a))
+          // .then(a=>(console.log(part.name,'fetch',performance.now()-start),a))
           .then(r=>r.arrayBuffer())
-          .then(a=>(console.log(part.name,'ab',performance.now()-start),a))
+          // .then(a=>(console.log(part.name,'ab',performance.now()-start),a))
           .then(b=>ac.decodeAudioData(b))
-          .then(a=>(console.log(part.name,'decoded',performance.now()-start),a))
+          // .then(a=>(console.log(part.name,'decoded',performance.now()-start),a))
         )
       );
-      if (!this.tracks || this.tracks.length !== decoded.length) this.tracks=new Array(decoded.length);
+      if (!this.tracks || this.tracks.length !== this.decoded.length) this.tracks=this.parts.map(p=>({vol:p.volume, solo:false, mute:false}));
+      console.log(this.$refs.partvol);
+      for(let n=0; n<this.parts.length; n++) this.$refs.partvol[n].setTo(this.tracks[n].vol);
+      this.loading = false;
+    },
+    setupAudio(){
+      const ac = this.ac = new AudioContext();
+      const {decoded} = this; 
       for(let n = 0; n<decoded.length; ++n){
+        const vol = this?.tracks?.[n]?.vol || 1;
         this.tracks[n] = {
-        vol:1,
+        vol,
         solo:false,
         mute:false,
         ...this.tracks[n],
         buffer:decoded[n],
         anal: new AnalyserNode(ac,{fftSize:256}),
-        gainNode: new GainNode(ac,{gain:this?.tracks?.[n]?.vol || 1}),
+        gainNode: new GainNode(ac),
         source:null,
         offset:0,
         }
@@ -127,8 +136,8 @@ export default {
       for (let track of this.tracks){
         track.anal.connect(track.gainNode).connect(this.ac.destination);
       }
-      if (this.beatIdx && this.beatIdx<this.beats.length) this.currentTime = this.beats[this.beatIdx][0]
-      this.loading = false;
+      if (this.beatIdx && this.beatIdx<this.beats.length) this.currentTime = this.beats[this.beatIdx][0];      
+      this.setVols();
     },
     setVol(e,i){
       this.tracks[i].vol=e.target.value;
@@ -156,14 +165,16 @@ export default {
       e.target.value = this.currentTime/this.duration;
     },
     setVols(){
+      if (!this.ac) return;
       const {tracks}=this;
       const isSolo = tracks.reduce((s,t)=>s||t.solo,false);
       tracks.forEach(t => {
-        t.gainNode.gain.value = isSolo && !t.solo || t.mute ? 0 : t.vol * this.mainVol;
+        t.gainNode.gain.value = isSolo && !t.solo || t.mute ? 0 : Math.pow(t.vol * this.mainVol,1.5);
       });
     },
     async play(){
       if (this.playing) return
+      if (!this.ac) this.setupAudio();
       const {ac,tracks} = this;
       await ac.resume();
       for (let track of tracks){
@@ -298,7 +309,7 @@ export default {
       </div>
       <div class=v-ind>{{((tracks[i] && tracks[i].vol || 1)*100).toFixed(0)}} </div>
       <label class="volume">
-        <volume class=slider min="0" max="1" step="0.01" @input="e=>setVol(e,i)"/>
+        <volume ref="partvol" class=slider min="0" max="1" step="0.01" @input="e=>setVol(e,i)"/>
       </label>
     </div>
     <div class=controls>

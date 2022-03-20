@@ -28,6 +28,9 @@
         const {outer} = this.$refs;
         this.width = outer.offsetWidth;
         this.height = outer.offsetHeight;
+      },
+      setTo(v){
+        this.$refs.slider.value = v;
       }
     },
     mounted(){
@@ -52,7 +55,7 @@
 </script>
 <template>
   <div ref="outer" class="outer">
-    <input type="range" :max="max" :min="min" :step="step" :style="style" :class="thumb" @input="input">
+    <input ref=slider type="range" :max="max" :min="min" :step="step" :style="style" :class="thumb" @input="input">
   </div>
 </template>
 <style scoped>
