@@ -176,7 +176,6 @@ export default {
       if (this.playing) return
       if (!this.ac) this.setupAudio();
       const {ac,tracks} = this;
-      await ac.resume();
       for (let track of tracks){
         track.source = new AudioBufferSourceNode(ac, {
           buffer:track.buffer,
@@ -184,6 +183,10 @@ export default {
         track.source.connect(track.anal);
         track.source.start(0,this.currentTime);
       }
+      this.playLoop();
+    },
+    async playLoop(){
+      const {ac,tracks} = this;
       this.offset = this.currentTime - ac.currentTime
       this.playing=true;
       tracks[0].source.onended=()=>this.playing=false;
@@ -209,7 +212,6 @@ export default {
         }
         await new Promise(requestAnimationFrame);
       }
-
     },
     pause(){
       if (!this.playing) return;
