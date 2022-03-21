@@ -111,7 +111,7 @@ div.error{
   font-size:1.2em;
   color:#ddd;
 }
-@media (max-height:360px) or (max-width:640px){
+@media (max-height:360px), (max-width:640px){
   html{
     height:auto;
     overflow-y: scroll;
