@@ -43,7 +43,7 @@
     computed:{
       style(){
         const {height,width} = this;
-        const backgroundImage = 'repeating-linear-gradient(90deg, #555, #555 1px,#333 1px, #333 calc(10% - 0.08px))'';
+        const backgroundImage = 'repeating-linear-gradient(90deg, #555, #555 1px,#333 1px, #333 calc(10% - 0.08px))';
         return height>width ? {
           width:height+'px',
           height:width+'px',
