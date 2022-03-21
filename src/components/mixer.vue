@@ -206,9 +206,13 @@ export default {
           const lev = Math.pow(Math.max(0,Math.min(1,(tot-128) / 127)),0.67)*100;
           if (!ctxs[i]) ctxs[i] = this.$refs.levels[i].getContext('2d')
           const c=ctxs[i];
-          c.clearRect(4,0,12,100-lev);
+          c.clearRect(0,0,100,100);
           c.fillStyle="#822";
-          c.fillRect(4,100-lev,12,100);
+          if (c.canvas.clientWidth>c.canvas.clientHeight){
+            c.fillRect(0,25,lev,75);
+          } else {
+            c.fillRect(25,100-lev,75,100);
+          }
         }
         await new Promise(requestAnimationFrame);
       }
@@ -306,7 +310,7 @@ export default {
           </label>
         </div>
         <div class=level>
-          <canvas class=indicator ref=levels width=16 height=100 />
+          <canvas class=indicator ref=levels width=100 height=100 />
           <div class=name>
             {{part.name}}
           </div>
@@ -575,7 +579,6 @@ export default {
     flex-direction:row;
     justify-content: space-around;
     align-items: center;
-    flex-wrap: wrap-reverse;
     width:100%;
     height:100%;
     overflow:hidden;
@@ -810,9 +813,139 @@ input.time:focus::-ms-fill-upper {
   input.time{
   width:240px;
   height:24px;
-  background:#0000;
   margin-top:-6px;
+  }
 }
+@media (max-height:360px) or (max-width:640px){
+  .mixer{
+    flex-direction: column-reverse;
+  }
+    .mixer>.controls{
+    grid-template: 46px 24px 60px 24px 60px 40px 40px 46px / 40px 2fr 1fr 40px;
+    width:calc(100vw - 40px);
+    height:340px;
+  }
+  .controls>.title{
+    grid-area:1/2/2/-2;
+  }
+    .controls>.next{
+    grid-area:1/-2/2/-1;
+  }
+  .controls>.prev{
+    grid-area:1/1/2/2;
+  }
+  .controls>.bar-title{
+    grid-area:2/1/3/3;
+  }
+  .controls>.bar-background, .controls>.bar{
+    padding:0;
+    grid-area:3/1/4/3;
+  }
+  .controls>.beat-title{
+    grid-area:2/3/3/-1;
+  }
+  .controls>.beat-background, .controls>.beat{
+    padding:0;
+    grid-area: 3/3/6/-1;
+  }
+  .controls>.time-title{
+    grid-area: 4/1/5/3;
+  }
+  .controls>.time-background, .controls>.time{
+    padding:0;
+    grid-area: 5/1/6/3;
+  }
+  .controls>.main{
+    grid-area: 6/1/7/-1;
+  }
+  .controls>.tempo{
+    grid-area: 7/1/8/-1;
+  }
+  .controls>.play{
+    grid-area: 8/1/9/2;
+  }
+  .controls>.main, .controls>.tempo{
+    flex-direction: row;
+  }
+  .main>.m-title, .tempo>.m-title{
+    flex: 0 0 50px;
+  }
+  .main>.m-ind, .tempo>.m-ind{
+    display:none;
+  }
+  .main>.slider, .tempo>.slider{
+    flex: 1 1 0;
+    position:relative;
+    max-height:40px;
+    height:80%;
+    margin: 0 10px;
+    max-width:none;
+    width:auto;
+  }
+  .controls>.timeline{
+    grid-area:8/2/9/-1;
+  }
+  input.time{
+  width:90%;
+  height:24px;
+  margin-top:-6px;
+  }
+
+  .mixer>.tracks{
+    flex-direction: column;
+  }
+  .tracks>.track{
+    flex: 1 1 50px;
+    height:40px;
+    grid-template:40px/1fr 1fr 23px 23px ;
+    width: calc(100vw - 40px);
+    border:none;
+    border-top:1.5px solid black;
+  }
+
+  .track .label{
+    display:none;
+  }
+    .track>.v-ind{
+      display:none;
+  }
+
+  .track>.level{
+    grid-area:1/1/2/2;
+  }
+  .level>.name{
+    font-size:28px;
+    grid-area:1/1/2/2;
+  }
+  .track>.volume{
+    grid-area:1/2/2/3;
+  }
+  .track>.solo{
+    grid-area:1/-3/2/-2;
+  }
+  .track>.mute{
+    grid-area:1/-2/2/-1;
+  }
+  .level>.name, .level>.indicator{
+    position:absolute;
+    left:0;
+    top:0;
+    width:100%;
+    height:100%;
+  }
+  .level>.name{
+    writing-mode:inherit;
+    transform:none;
+    text-align: center;
+    font-size:32px;
+    padding:4px;
+  }
+  .track>.volume{
+    grid-area:1/2/-1/3;
+    position:relative;
+    padding:0;
+  }
+  
 
 }
 

@@ -73,7 +73,7 @@ export default {
 html, body{
   width:100%;
   height:100%;
-  overflow:visible;
+  overflow:hidden;
 }
 * {
   box-sizing: border-box;
@@ -110,6 +110,12 @@ div.error{
   font-weight:bold;
   font-size:1.2em;
   color:#ddd;
+}
+@media (max-height:360px) or (max-width:640px){
+  html{
+    height:auto;
+    overflow-y: scroll;
+  }
 }
 
 </style>
