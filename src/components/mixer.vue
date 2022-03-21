@@ -203,7 +203,7 @@ export default {
           }
           track.anal.getByteTimeDomainData(data);
           const tot = Math.max(...data);
-          const lev = Math.max(0,Math.min(100,(tot-127) * 100 / 128));
+          const lev = Math.pow(Math.max(0,Math.min(1,(tot-128) / 127)),0.67)*100;
           if (!ctxs[i]) ctxs[i] = this.$refs.levels[i].getContext('2d')
           const c=ctxs[i];
           c.clearRect(4,0,12,100-lev);
