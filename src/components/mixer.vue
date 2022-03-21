@@ -340,7 +340,7 @@ export default {
       <template v-else>
         <input type="text" ref="newbar" v-model="newbar" class="bar" @blur="editBarDone" @keyup.enter="editBarDone" @keyup.escape="editBarQuit">
       </template>
-
+      
       <div class=beat-title>Beat</div>
       <div class=beat-background />
       <div class=beat v-if=beats[beatIdx]>{{beats[beatIdx][2]}}</div>
@@ -816,7 +816,7 @@ input.time:focus::-ms-fill-upper {
   margin-top:-6px;
   }
 }
-@media (max-height:360px) or (max-width:640px){
+@media (max-width:640px){
   .mixer{
     flex-direction: column-reverse;
   }
@@ -838,8 +838,13 @@ input.time:focus::-ms-fill-upper {
     grid-area:2/1/3/3;
   }
   .controls>.bar-background, .controls>.bar{
-    padding:0;
+    padding:6px 0 0;
     grid-area:3/1/4/3;
+    font-size: 36px;
+  }
+  .controls>input.bar{
+    padding:3px 0 0;
+    width:100%;
   }
   .controls>.beat-title{
     grid-area:2/3/3/-1;
@@ -852,7 +857,8 @@ input.time:focus::-ms-fill-upper {
     grid-area: 4/1/5/3;
   }
   .controls>.time-background, .controls>.time{
-    padding:0;
+    padding:6px 0 0;
+    font-size:36px;
     grid-area: 5/1/6/3;
   }
   .controls>.main{
@@ -945,8 +951,150 @@ input.time:focus::-ms-fill-upper {
     position:relative;
     padding:0;
   }
+
   
 
 }
+
+@media (max-height:360px){
+  .mixer{
+    flex-direction: column-reverse;
+  }
+    .mixer>.controls{
+    grid-template: 46px 24px 60px 24px 60px 40px 40px 46px / 40px 2fr 1fr 40px;
+    width:calc(100vw - 40px);
+    height:340px;
+  }
+  .controls>.title{
+    grid-area:1/2/2/-2;
+  }
+    .controls>.next{
+    grid-area:1/-2/2/-1;
+  }
+  .controls>.prev{
+    grid-area:1/1/2/2;
+  }
+  .controls>.bar-title{
+    grid-area:2/1/3/3;
+  }
+  .controls>.bar-background, .controls>.bar{
+    padding:6px 0 0;
+    grid-area:3/1/4/3;
+    font-size: 36px;
+  }
+  .controls>input.bar{
+    padding:3px 0 0;
+    width:100%;
+  }
+  .controls>.beat-title{
+    grid-area:2/3/3/-1;
+  }
+  .controls>.beat-background, .controls>.beat{
+    padding:0;
+    grid-area: 3/3/6/-1;
+  }
+  .controls>.time-title{
+    grid-area: 4/1/5/3;
+  }
+  .controls>.time-background, .controls>.time{
+    padding:6px 0 0;
+    font-size:36px;
+    grid-area: 5/1/6/3;
+  }
+  .controls>.main{
+    grid-area: 6/1/7/-1;
+  }
+  .controls>.tempo{
+    grid-area: 7/1/8/-1;
+  }
+  .controls>.play{
+    grid-area: 8/1/9/2;
+  }
+  .controls>.main, .controls>.tempo{
+    flex-direction: row;
+  }
+  .main>.m-title, .tempo>.m-title{
+    flex: 0 0 50px;
+  }
+  .main>.m-ind, .tempo>.m-ind{
+    display:none;
+  }
+  .main>.slider, .tempo>.slider{
+    flex: 1 1 0;
+    position:relative;
+    max-height:40px;
+    height:80%;
+    margin: 0 10px;
+    max-width:none;
+    width:auto;
+  }
+  .controls>.timeline{
+    grid-area:8/2/9/-1;
+  }
+  input.time{
+  width:90%;
+  height:24px;
+  margin-top:-6px;
+  }
+
+  .mixer>.tracks{
+    flex-direction: column;
+  }
+  .tracks>.track{
+    flex: 1 1 50px;
+    height:40px;
+    grid-template:40px/1fr 1fr 23px 23px ;
+    width: calc(100vw - 40px);
+    border:none;
+    border-top:1.5px solid black;
+  }
+
+  .track .label{
+    display:none;
+  }
+    .track>.v-ind{
+      display:none;
+  }
+
+  .track>.level{
+    grid-area:1/1/2/2;
+  }
+  .level>.name{
+    font-size:28px;
+    grid-area:1/1/2/2;
+  }
+  .track>.volume{
+    grid-area:1/2/2/3;
+  }
+  .track>.solo{
+    grid-area:1/-3/2/-2;
+  }
+  .track>.mute{
+    grid-area:1/-2/2/-1;
+  }
+  .level>.name, .level>.indicator{
+    position:absolute;
+    left:0;
+    top:0;
+    width:100%;
+    height:100%;
+  }
+  .level>.name{
+    writing-mode:inherit;
+    transform:none;
+    text-align: center;
+    font-size:32px;
+    padding:4px;
+  }
+  .track>.volume{
+    grid-area:1/2/-1/3;
+    position:relative;
+    padding:0;
+  }
+
+  
+
+}
+
 
 </style>
