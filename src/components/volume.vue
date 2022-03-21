@@ -17,6 +17,7 @@
       return{
         width:0,
         height:0,
+        ticker:null
       }
     },
     methods:{
@@ -35,10 +36,12 @@
     },
     mounted(){
       window.addEventListener('resize',this.resize);
+      this.ticker = setInterval(this.resize,1000);
       setTimeout(this.resize);
     },
     beforeUnmount(){
       window.removeEventListener('resize',this.resize);
+      clearInterval(this.ticker);
     },
     computed:{
       style(){
