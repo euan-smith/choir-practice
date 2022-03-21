@@ -42,12 +42,18 @@
     },
     computed:{
       style(){
-        return {
-          width:this.height+'px',
-          height:this.width+'px',
+        const {height,width} = this;
+        const backgroundImage = 'repeating-linear-gradient(90deg, #555, #555 1px,#333 1px, #333 calc(10% - 0.08px))'';
+        return height>width ? {
+          width:height+'px',
+          height:width+'px',
           transform:'rotate(270deg)',
-          transformOrigin:this.height/2+'px '+this.height/2+'px',
-          backgroundImage:`repeating-linear-gradient(90deg, #555, #555 1px,#333 1px, #333 calc(10% - 0.08px))`
+          transformOrigin:height/2+'px '+height/2+'px',
+          backgroundImage
+        } : {
+          width:width+'px',
+          height:height+'px',
+          backgroundImage
         }
       }
     }
