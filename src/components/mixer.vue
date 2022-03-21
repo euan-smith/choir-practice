@@ -289,30 +289,33 @@ export default {
     <div class=loading v-if=loading>
       <span>LOADING...</span>
     </div>
-    <div class=track v-for="(part,i) of parts" :key="i" >
-      <div class=mute >
-        <label>mute
-          <input type=checkbox @change="e=>setMute(e,i)">
-          <div class=light></div>
-        </label>
-      </div>
-      <div class=solo>
-        <label>
-          <div>solo</div>
-          <input type=checkbox @change="e=>setSolo(e,i)">
-          <div class=light></div>
-        </label>
-      </div>
-      <div class=level>
-        <canvas class=indicator ref=levels width=16 height=100 />
-        <div class=name>
-          {{part.name}}
+    <div class=tracks>
+      <div class=track v-for="(part,i) of parts" :key="i" >
+        <div class=mute >
+          <label>
+            <div class="label">mute</div>
+            <input type=checkbox @change="e=>setMute(e,i)">
+            <div class=light></div>
+          </label>
         </div>
+        <div class=solo>
+          <label>
+            <div class="label">solo</div>
+            <input type=checkbox @change="e=>setSolo(e,i)">
+            <div class=light></div>
+          </label>
+        </div>
+        <div class=level>
+          <canvas class=indicator ref=levels width=16 height=100 />
+          <div class=name>
+            {{part.name}}
+          </div>
+        </div>
+        <div class=v-ind>{{((tracks[i] && tracks[i].vol || 1)*100).toFixed(0)}} </div>
+        <label class="volume">
+          <volume ref="partvol" class=slider min="0" max="1" step="0.01" @input="e=>setVol(e,i)"/>
+        </label>
       </div>
-      <div class=v-ind>{{((tracks[i] && tracks[i].vol || 1)*100).toFixed(0)}} </div>
-      <label class="volume">
-        <volume ref="partvol" class=slider min="0" max="1" step="0.01" @input="e=>setVol(e,i)"/>
-      </label>
     </div>
     <div class=controls>
       <div class=title> {{title}} </div>
@@ -358,6 +361,8 @@ export default {
 /* .mixer *{
   border: #a00 1px solid;
 } */
+
+
   .mixer{
     position:relative;
     user-select: none;
@@ -365,8 +370,11 @@ export default {
     color:white;
     display:flex;
     flex-direction:row;
-    width:max-content;
+    width:fit-content;
+    max-width:calc(100vw - 20px);
+    /* flex-wrap: wrap-reverse; */
   }
+
   .mixer>.loading{
     position: absolute;
     background: #333c;
@@ -393,10 +401,16 @@ export default {
     font-size:60px;
     font-weight:900;
   }
+  .mixer>.tracks{
+    display:flex;
+    flex-direction:row;
+    width:max-content;
+  }
 
-  .mixer>.track{
+  .tracks>.track{
+    flex: 1 1 100px;
     display:grid;
-    grid-template:40px 40px 30px 250px / 50px 50px;
+    grid-template:40px 40px 30px 110px 140px / 1fr 1fr;
     width:100px;
     height:360px;
     background:#333;
@@ -555,17 +569,21 @@ export default {
     border-radius:5px;
     height:20px;
   }
-  .track>.solo,  .track>.mute{
-    color:white;
-    font-size:20px;
-  }
+  
   .track>.solo label, .track>.mute label{
     display:flex;
     flex-direction:row;
     justify-content: space-around;
     align-items: center;
+    flex-wrap: wrap-reverse;
     width:100%;
     height:100%;
+    overflow:hidden;
+    /* border:red 1px solid; */
+  }
+  .track .label{
+    color:white;
+    font-size:20px;
   }
   .track input[type=checkbox]{
     display:none;
@@ -591,7 +609,7 @@ export default {
   }
   .track>.level{
     position:relative;
-    grid-area:4/1/5/2;
+    grid-area:4/1/-1/2;
   }
   .level>.name, .level>.indicator{
     position:absolute;
@@ -608,7 +626,7 @@ export default {
     padding:4px;
   }
   .track>.volume{
-    grid-area:4/2/5/3;
+    grid-area:4/2/-1/3;
     position:relative;
     padding:4px 2px 9px;
   }
@@ -710,6 +728,92 @@ input.time:focus::-ms-fill-lower {
 }
 input.time:focus::-ms-fill-upper {
   background: #111;
+}
+@media (max-width:1400px){
+  .tracks>.track{
+    width:40px;
+    grid-template:30px 30px 0 150px 150px / 1fr 1fr;
+  }
+  .track .label{
+    display:none;
+  }
+    .track>.v-ind{
+      display:none;
+  }
+
+    .track>.level{
+    position:relative;
+    grid-area:5/1/-1/3;
+  }
+  .level>.name{
+    font-size:28px;
+  }
+  .track>.volume{
+    grid-area:3/1/5/3;
+  }
+}
+@media (max-width:1000px){
+  .tracks>.track{
+    width:40px;
+    grid-template:23px 23px 0 140px 140px / 1fr 1fr;
+    height:326px;
+  }
+  .track .light{
+    width:20px;
+    height:20px;
+  }
+  .mixer>.controls{
+    grid-template:46px 30px 90px 30px 90px 40px / 40px 40px 40px 160px 80px 40px;
+    width:400px;
+    height:326px;
+  }
+  .play>.material-icons{
+    font-size:48px;
+  }
+  .controls>.next{
+    font-size:48px;
+  }
+  .controls>.prev{
+    font-size:48px;
+  }
+  .controls>.timeline{
+    padding:14px 0;
+  }
+  .controls>.title{
+    font-size:32px;
+  }
+  .controls>.bar{
+    font-size: 48px;
+    padding-top:12px;
+  }
+  .controls>.beat{
+    font-size: 110px;
+    padding-top:33px;
+  }
+  .controls>.time{
+    font-size: 48px;
+    padding-top:12px;
+  }
+  .main, .tempo{
+    font-size:14px;
+  }
+  .main>.m-ind, .tempo>.m-ind{
+    display:none;
+  }
+  .main>.slider, .tempo>.slider{
+    max-width:34px;
+    width:80%;
+    margin: 0.3em 0 0.5em;
+    height:100%;
+    top:0;
+  }
+  input.time{
+  width:240px;
+  height:24px;
+  background:#0000;
+  margin-top:-6px;
+}
+
 }
 
 </style>
