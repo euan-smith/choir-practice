@@ -1,9 +1,11 @@
 # Choir Practice Webapp
 
 This app is an interface through which members of a choir can access practice versions of performance pieces.  The full size interface looks like this:
+
 <img style="width:50em" src="./docs/full-size.png">
 
 The app is reactive and tries to re-arrange itself to fit with the available screen size.  The smallest format, for mobile, looks like ths:
+
 <img style="width:25em" src="./docs/mobile.png">
 
 ## Aims
