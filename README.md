@@ -1,14 +1,10 @@
 # Choir Practice Webapp
 
 This app is an interface through which members of a choir can access practice versions of performance pieces.  The full size interface looks like this:
-<div>
-<img style="max-width:50em; position:relative; left:50%; transform:translate(-50%,0)" src="./docs/full-size.png">
-</div>
+<img style="width:50em" src="./docs/full-size.png">
 
 The app is reactive and tries to re-arrange itself to fit with the available screen size.  The smallest format, for mobile, looks like ths:
-<div>
-<img style="max-width:25em; position:relative; left:50%; transform:translate(-50%,0)" src="./docs/mobile.png">
-</div>
+<img style="width:25em" src="./docs/mobile.png">
 
 ## Aims
 
@@ -100,3 +96,14 @@ and to build the app (to the dist folder):
 ``` bash
 npm run build
 ```
+
+## roadmap
+
+- Remember scores previously accessed (save to local storage) and provide a means to access those scores.
+- Have the option of a metronome with a bar of lead-in beats (repurpose the non-working 'tempo' slider for the metronome volume).
+- Create a locally-hostable version (most likely an electron app) which can sync to/from an S3 bucket where the app and scores can be hosted and provide simpler means to create and manage scores and play accompanyment during rehearsal.
+
+## A note on changing playback speed
+The playback speed of a sound file can easily be changed, unfortunately this also changes the pitch, and correcting that pitch change is not simple.  A few attempts have been made, none of them satisfactory.  The approach taken currently is to store several alternate versions of a score with different speeds.
+
+There are three potential solutions to this.  First the facility to natively fix this in the audio API might become available, after all this is possible through the `<audio>` HTML5 control so the browsers know how to do this.  A second solution might be to find a suitable means of playing either Midi or musescore files natively.  Finally some bright spark might find a way to get the Audio API to do this right - this seems the furthest out as there have definitely been attempts but none have been particularly satisfactory.
