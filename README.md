@@ -101,7 +101,6 @@ npm run build
 
 ## roadmap
 
-- Remember scores previously accessed (save to local storage) and provide a means to access those scores.
 - Have the option of a metronome with a bar of lead-in beats (repurpose the non-working 'tempo' slider for the metronome volume).
 - Create a locally-hostable version (most likely an electron app) which can sync to/from an S3 bucket where the app and scores can be hosted and provide simpler means to create and manage scores and play accompanyment during rehearsal.
 
