@@ -1,4 +1,17 @@
 <script>
+/**
+ * 1 if there is a score specified, and it is valid, show the score (done)
+ * 2                                if it is not valid, and there is a list, say score not valid, offer other scores
+ * 4 if there is no score, and there is a list, offer a selection
+ * 5                     , if there is no list, say that '?score=' must be provided
+ * 6 if a score is chosen and it is valid show the score (done)
+ * 7 if a score is chosen and it is not valid say 'oops, that link no longer works', show the rest
+ * 
+ * errors:
+ * 2. "score 'foo' does not seem to be valid.  The link might be old or broken."
+ * <message heading>
+ * <list
+ */
 import Mixer from './components/mixer.vue';
 export default {
   components:{
@@ -9,13 +22,18 @@ export default {
       error:null,
       title:'',
       scores:[],
+      scoreList:{},
       index:0,
+      ready:false,
     }
   },
   computed:{
+    scoreNames(){
+      return Object.keys(this.scoreList)
+    },
     score(){
       const {scores, index} = this;
-      return scores && scores[index] || {parts:[],bars:[]};
+      return scores && scores[index];
     },
     fullTitle(){
       const {title, scores, index} = this;
@@ -28,40 +46,85 @@ export default {
     },
     showPrev(){
       return this.index>0;
+    },
+    showScore(){
+      return this.score && !this.error;
+    }
+  },
+  methods:{
+    readScores(){
+      const s = localStorage.getItem('scores');
+      try{
+        this.scoreList = JSON.parse(s);
+      } catch(e){}
+    },
+    writeScores(){
+      localStorage.setItem('scores',JSON.stringify(this.scoreList));
+    },
+    addScore(name, title){
+      this.scoreList[name]=title;
+      this.writeScores();
+    },
+    removeScore(name){
+      delete this.scoreList[name];
+      this.writeScores();
+    },
+    loadScore(name){
+      location='?score='+name;
     }
   },
   async mounted(){
-    if (!window.location.search) return this.error = ["Unable to load a score - none specified","URL should include '?score=<score name>'"];
-    const q = window.location.search.slice(1).split('&').map(s=>s.split('=')).reduce((o,d)=>Object.assign(o,{[d[0]]:d[1]}),{});
-    if (!q.score) return this.error = ["Unable to load a score - none specified","URL should include '?score=<score name>'"];
-    try{
-      const data = await fetch('/'+q.score+'.json').then(r=>r.json());
-      if (data.parts && data.bars){
-        this.title = data.title;
-        this.scores = [{
-          subtitle:'',
-          ...data
-        }]
-      } else if (data.scores && data.title){
-        this.title = data.title;
-        this.scores = data.scores;
-      } else this.error = [`Invlid score "${q.score}"`];
-    } catch(e){
-      this.error = [`Unable to load score "${q.score}"`];
+    this.readScores();
+    if (window.location.search){
+      const q = window.location.search.slice(1).split('&').map(s=>s.split('=')).reduce((o,d)=>Object.assign(o,{[d[0]]:d[1]}),{});
+      try{
+        const data = await fetch('/'+q.score+'.json').then(r=>r.json());
+        if (data.parts && data.bars){
+          this.title = data.title;
+          this.scores = [{
+            subtitle:'',
+            ...data
+          }]
+          this.addScore(q.score,data.title);
+        } else if (data.scores && data.title){
+          this.title = data.title;
+          this.scores = data.scores;
+          this.addScore(q.score, data.title);
+        } else this.error = [`Invlid score "${q.score}"`];
+      } catch(e){
+        this.error = [`Unable to load score "${q.score}"`];
+        this.removeScore(q.score);
+      }
     }
+    this.ready=true;
   },
 }
 </script>
 
 <template>
-  <div class=container>
+  <div v-if=showScore class=container>
     <div class=border>
-      <mixer class=mixer v-if=score :parts=score.parts :title=fullTitle :bars=score.bars :show-next=showNext :show-prev=showPrev @next=++index @prev=--index />
-      <div v-else-if=error class=error>
-        <h1 v-if=error[0]>{{error[0]}}</h1>
-        <p :key=i v-for="(line,i) of error.slice(1)">{{line}}</p>
+      <mixer class=mixer :parts=score.parts :title=fullTitle :bars=score.bars :show-next=showNext :show-prev=showPrev @next=++index @prev=--index />
+    </div>
+  </div>
+  <div v-else-if=!ready />
+  <div v-else class="selector-container">
+  <div class=selector>
+    <div v-if=error class=error>
+        <p :key=i v-for="(line,i) of error">{{line}}</p>
+    </div>
+    <div v-if="scoreNames?.length" class=list-container>
+      <div class="msg">
+        Load a previous score by clicking the list below.
+      </div>
+      <div  class=score-list >
+        <div :key=i v-for="(s,i) of scoreNames" class=score @click=loadScore(s) >{{scoreList[s]}}</div>
+      </div>
+      <div class=msg2>
+        If the score you want is not here, you need a new url link from your choir master.
       </div>
     </div>
+  </div>
   </div>
 </template>
 
@@ -71,6 +134,7 @@ export default {
   src: url(/Lato-Light.ttf);
 }
 html, body{
+  font-family:Lato, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;;
   width:100%;
   height:100%;
   overflow:hidden;
@@ -79,6 +143,45 @@ html, body{
   box-sizing: border-box;
   padding:0;
   margin:0;
+}
+div.selector-container{
+  position:relative;
+  background:#ccc;
+  width:100vw;
+  height:100vh;
+}
+div.selector{
+  max-width: 512px;
+  background:white;
+  position:absolute;
+  left:50%;
+  top:40px;
+  transform:translate(-50%,0);
+  padding:1em;
+  box-shadow: #0004 -3px 3px 10px;
+  border-radius: 8px;
+}
+.msg{
+  font-size: 1.2em;
+  padding: 5px;
+}
+.score-list{
+  width:100%;
+  display:flex;
+  flex-direction:column;
+  margin: 5px 2px 8px;
+}
+.score-list>.score{
+  font-size:1.1em;
+  width:calc(100% - 20px);
+  padding:2px 1em;
+  margin: 2px 2px;
+  border-radius: 4px;
+  transition: 0.2s linear;
+}
+.score-list>.score:hover{
+  background:#eee;
+  cursor: pointer;
 }
 .container{
   padding:5px;
@@ -99,18 +202,15 @@ html, body{
 
 div.error{
   font-family: Lato, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background:#333;
   padding:16px;
-  color:white;
+  border-left:5px solid red;
 }
-.error>h1{
-  color:#faa;
-}
-.error>p{
+div.error:first-child{
   font-weight:bold;
   font-size:1.2em;
-  color:#ddd;
+  color:#300;
 }
+
 @media (max-height:360px), (max-width:640px){
   html{
     height:auto;
