@@ -29,7 +29,7 @@ export default {
   },
   computed:{
     scoreNames(){
-      return Object.keys(this.scoreList)
+      return this.scoreList && Object.keys(this.scoreList)
     },
     score(){
       const {scores, index} = this;
@@ -123,6 +123,12 @@ export default {
       <div class=msg2>
         If the score you want is not here, you need a new url link from your choir master.
       </div>
+    </div>
+    <div v-else>
+      <div class="error">
+        No score to display.
+      </div>
+      You don't seem to have accessed a score - you need a link to one from your choir master.
     </div>
   </div>
   </div>
