@@ -1,6 +1,8 @@
 
 <script>
 import Volume from "./volume.vue";
+import stick4cs from "../assets/stick-4cs.mp3";
+import stick4d from "../assets/stick-4d.mp3";
 export default {
   components:{
     Volume
@@ -62,7 +64,9 @@ export default {
       duration:10,
       newbar:null,
       lastNewbar:'',
-      decoded:[]
+      decoded:[],
+      sticks:[],
+      metronome:{vol:0},
     }
   },
   computed:{
@@ -111,6 +115,13 @@ export default {
           // .then(a=>(console.log(part.name,'decoded',performance.now()-start),a))
         )
       );
+      this.sticks = await Promise.all(
+        [stick4cs,stick4d].map(
+          file=>fetch(file)
+          .then(r=>r.arrayBuffer())
+          .then(b=>ac.decodeAudioData(b))
+        )
+      )
       if (!this.tracks || this.tracks.length !== this.decoded.length) this.tracks=this.parts.map(p=>({vol:p.volume, solo:false, mute:false}));
       console.log(this.$refs.partvol);
       for(let n=0; n<this.parts.length; n++) this.$refs.partvol[n].setTo(this.tracks[n].vol);
@@ -118,25 +129,47 @@ export default {
     },
     setupAudio(){
       const ac = this.ac = new AudioContext();
-      const {decoded} = this; 
+      const {decoded,sticks} = this; 
       for(let n = 0; n<decoded.length; ++n){
         const vol = this?.tracks?.[n]?.vol || 1;
         this.tracks[n] = {
-        vol,
-        solo:false,
-        mute:false,
-        ...this.tracks[n],
-        buffer:decoded[n],
-        anal: new AnalyserNode(ac,{fftSize:256}),
-        gainNode: new GainNode(ac),
-        source:null,
-        offset:0,
+          vol,
+          solo:false,
+          mute:false,
+          ...this.tracks[n],
+          buffer:decoded[n],
+          anal: new AnalyserNode(ac,{fftSize:256}),
+          gainNode: new GainNode(ac),
+          source:null,
+          offset:0,
         }
+      }
+      this.metronome = {
+        active: true,
+        intro: false,
+        vol:0.0,
+        ...this.metronome,
+        sticks,
+        gainNode: new GainNode(ac),
+        source: null,
       }
       for (let track of this.tracks){
         track.anal.connect(track.gainNode).connect(this.ac.destination);
       }
+      this.metronome.gainNode.connect(this.ac.destination);
       if (this.beatIdx && this.beatIdx<this.beats.length) this.currentTime = this.beats[this.beatIdx][0];      
+      this.setVols();
+    },
+    setMetVol(e){
+      this.metronome.vol = e.target.value;
+      this.setVols();
+    },
+    toggleMetActive(){
+      this.metronome.active = !this.metronome.active;
+      this.setVols();
+    },
+        toggleMetIntro(){
+      this.metronome.intro = !this.metronome.intro;
       this.setVols();
     },
     setVol(e,i){
@@ -166,11 +199,12 @@ export default {
     },
     setVols(){
       if (!this.ac) return;
-      const {tracks}=this;
+      const {tracks, metronome}=this;
       const isSolo = tracks.reduce((s,t)=>s||t.solo,false);
       tracks.forEach(t => {
         t.gainNode.gain.value = isSolo && !t.solo || t.mute ? 0 : Math.pow(t.vol * this.mainVol,1.5);
       });
+      metronome.gainNode.gain.value = metronome.active ? metronome.vol : 0;
     },
     async play(){
       if (this.playing) return
@@ -183,10 +217,19 @@ export default {
         track.source.connect(track.anal);
         track.source.start(0,this.currentTime);
       }
+      const time = this.beats[this.beatIdx][0]-this.currentTime+0.053;
+      if (time>=0){
+          const tickIdx = this.beats[this.beatIdx][2] === 1 ? 1 : 0;
+          const {metronome} = this;
+          metronome.source = new AudioBufferSourceNode(ac, {buffer:this.sticks[tickIdx]});
+          metronome.source.connect(metronome.gainNode);
+          metronome.source.start(ac.currentTime+time,0);
+
+      }
       this.playLoop();
     },
     async playLoop(){
-      const {ac,tracks} = this;
+      const {ac,tracks,metronome} = this;
       this.offset = this.currentTime - ac.currentTime
       this.playing=true;
       tracks[0].source.onended=()=>this.playing=false;
@@ -194,8 +237,22 @@ export default {
       while (this.playing){
         this.currentTime = Math.min(ac.currentTime + this.offset, this.duration);
         this.$refs.time.value = this.currentTime / this.duration;
+        const oldBeatIdx = this.beatIdx;
         while (this.beats[this.beatIdx][0]>this.currentTime)this.beatIdx--;
         while (this.beats[this.beatIdx+1] && this.beats[this.beatIdx+1][0]<this.currentTime)this.beatIdx++;
+        if (oldBeatIdx !== this.beatIdx){
+          if (metronome.source){
+          metronome.source.disconnect();
+          metronome.source.stop();
+          }
+
+          const time = this.beats[this.beatIdx][0]-this.currentTime+0.05;
+          const tickIdx = this.beats[this.beatIdx][2] === 1 ? 1 : 0;
+          metronome.source = new AudioBufferSourceNode(ac, {buffer:this.sticks[tickIdx]});
+          metronome.source.connect(metronome.gainNode);
+          metronome.source.start(ac.currentTime+time,0);
+
+        }
         for (let [i,track] of tracks.entries()){
           if (!data){
             binCount = track.anal.frequencyBinCount;
@@ -225,6 +282,9 @@ export default {
         track.source.stop();
         track.source = null;
       }
+      metronome.source.disconnect();
+      metronome.source.stop();
+      metronome.source=null;
     },
     next(){
       this.pause();
@@ -328,10 +388,10 @@ export default {
         <div class=m-ind>{{(mainVol*100).toFixed(0)}}</div>
         <volume class=slider thumb="red" min=0 max=1 step=0.001 value=1 @input="setMain" />
       </label>
-      <label class=tempo style="opacity:0.5">
-        <div class="m-title"> Tempo </div>
-        <div class=m-ind>{{(tempo*100).toFixed(0)}}</div>
-        <volume class=slider thumb="blue" min=0.5 max=1.5 step=0.001 value=1  disabled />
+      <label class=tempo>
+        <div class="m-title"> Tick </div>
+        <div class=m-ind>{{(metronome.vol*100).toFixed(0)}}</div>
+        <volume class=slider thumb="blue" min=0 max=1 step=0.001 :value=0 @input="setMetVol" disabled />
       </label>
       <div class=bar-title>Bar / Repeat</div>
       <div class=bar-background />

@@ -23,4 +23,5 @@ dist-ssr
 *.sln
 *.sw?
 *.mp3
+!src/assets/*.mp3
 public/*.json
