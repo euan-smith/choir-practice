@@ -62,10 +62,12 @@ export default {
       localStorage.setItem('scores',JSON.stringify(this.scoreList));
     },
     addScore(name, title){
+      if (!this.scoreList) return;
       this.scoreList[name]=title;
       this.writeScores();
     },
     removeScore(name){
+      if (!this.scoreList) return;
       delete this.scoreList[name];
       this.writeScores();
     },
