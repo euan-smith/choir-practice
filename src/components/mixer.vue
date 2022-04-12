@@ -57,8 +57,9 @@ export default {
       tracks:[],
       currentTime:0,
       playing:false,
+      firstBeat:null,
+      beat:null,
       beats:[],
-      beatIdx:0,
       mainVol:1,
       tempo:1,
       duration:10,
@@ -71,17 +72,21 @@ export default {
   },
   computed:{
     barInd(){
-      const beat = this.beats[this.beatIdx];
+      const {beat} = this;
       if (!beat) return '000/0';
-      let s = ''+beat[1];
+      let s = ''+beat.bar;
       // if (s.length<3) s='000'.slice(s.length)+s;
-      if (beat[3]) s+='/'+beat[3];
+      if (beat.repeat) s+='/'+beat.repeat;
       return s;
+    },
+    displayTime(){
+      return typeof this?.beat?.dTime === 'number' ? this.beat.dTime : this.currentTime;
     }
   },
   methods:{
     parseBars(){
-      const beats=[];//[timestamp, bar, beat, repeat]
+      const preBeat={};
+      let cBeat=preBeat;
       let time=0, beat=1, bar=1, tempo=100, timeSig=4;
       for (let b of this.bars){
         let repeat = b.repeat || 0;
@@ -89,7 +94,7 @@ export default {
         if (b.tempo) ({tempo} = b);
         if (b.timeSig) ({timeSig} = b);
         for (let n=0; n<b.beats; n++){
-          beats.push([time, bar, beat, repeat, beats.length]);
+          cBeat = (cBeat.next = {time, bar, beat, repeat, timeSig, tempo, prev:cBeat});
           if (++beat > timeSig){
             ++bar;
             beat-=timeSig;
@@ -97,7 +102,9 @@ export default {
           time+=60/tempo;
         }
       }
-      this.beats = beats;
+      this.firstBeat = preBeat.next;
+      this.firstBeat.prev = null;
+      this.beat = this.firstBeat;
       this.duration = time;
     },
     async load(){
@@ -157,7 +164,7 @@ export default {
         track.anal.connect(track.gainNode).connect(this.ac.destination);
       }
       this.metronome.gainNode.connect(this.ac.destination);
-      if (this.beatIdx && this.beatIdx<this.beats.length) this.currentTime = this.beats[this.beatIdx][0];      
+      if (this.beat) this.currentTime = this.beat.time;      
       this.setVols();
     },
     setMetVol(e){
@@ -191,10 +198,10 @@ export default {
     setTime(e){
       if (this.playing) this.pause();
       this.currentTime = e.target.value * this.duration;
-      while (this.beats[this.beatIdx][0]>this.currentTime)this.beatIdx--;
-      while (this.beats[this.beatIdx+1] && this.beats[this.beatIdx+1][0]<this.currentTime)this.beatIdx++;
-      while (this.beats[this.beatIdx][2]>1) this.beatIdx--;
-      this.currentTime = this.beats[this.beatIdx][0];
+      while (this.beat.time>this.currentTime) this.beat=this.beat.prev;
+      while (this.beat.next && this.beat.next.time<this.currentTime)this.beat=this.beat.next;
+      while (this.beat.beat>1) this.beat=this.beat.prev;
+      this.currentTime = this.beat.time;
       e.target.value = this.currentTime/this.duration;
     },
     setVols(){
@@ -217,14 +224,45 @@ export default {
         track.source.connect(track.anal);
         track.source.start(0,this.currentTime);
       }
-      const time = this.beats[this.beatIdx][0]-this.currentTime+0.053;
+      const time = this.beat.time-this.currentTime+0.053;
       if (time>=0){
-          const tickIdx = this.beats[this.beatIdx][2] === 1 ? 1 : 0;
+          const tickIdx = this.beat.bar === 1 ? 1 : 0;
           const {metronome} = this;
           metronome.source = new AudioBufferSourceNode(ac, {buffer:this.sticks[tickIdx]});
           metronome.source.connect(metronome.gainNode);
           metronome.source.start(ac.currentTime+time,0);
-
+      }
+      this.playLoop();
+    },
+    async prePlay(){
+      if (this.playing) return
+      if (!this.ac) this.setupAudio();
+      // how many beats pre the current bar
+      const beatCount = this.beat.beat === 1 ? this.beat.timeSig : this.beat.beat - 1;
+      // time per beat
+      const period = 60/this.beat.tempo;
+      let beat = this.beat;
+      for (let n=beatCount; n>=1;){
+        beat = {...beat, time:beat.time-period, next:beat, beat:n--, dTime:this.currentTime, onPause: this.beat}
+      }
+      const start = this.currentTime - beat.time;
+      this.beat = beat;
+      const {ac,tracks} = this;
+      for (let track of tracks){
+        track.source = new AudioBufferSourceNode(ac, {
+          buffer:track.buffer,
+        });
+        track.source.connect(track.anal);
+        track.source.start(ac.currentTime+start,this.currentTime);
+      }
+      this.currentTime-=start;
+      const time = this.beat.time-this.currentTime+0.053;
+      if (time>=0){
+          const tickIdx = this.beat.bar === 1 ? 1 : 0;
+          const {metronome} = this;
+          metronome.source = new AudioBufferSourceNode(ac, {buffer:this.sticks[tickIdx]});
+          metronome.source.connect(metronome.gainNode);
+          metronome.source.start(ac.currentTime+time,0);
       }
       this.playLoop();
     },
@@ -236,22 +274,20 @@ export default {
       let binCount = null, data = null, ctxs=[];
       while (this.playing){
         this.currentTime = Math.min(ac.currentTime + this.offset, this.duration);
-        this.$refs.time.value = this.currentTime / this.duration;
-        const oldBeatIdx = this.beatIdx;
-        while (this.beats[this.beatIdx][0]>this.currentTime)this.beatIdx--;
-        while (this.beats[this.beatIdx+1] && this.beats[this.beatIdx+1][0]<this.currentTime)this.beatIdx++;
-        if (oldBeatIdx !== this.beatIdx){
+        this.$refs.time.value = this.displayTime / this.duration;
+        const oldBeat = this.beat;
+        if (this.beat.time>this.currentTime) this.beat = this.firstBeat;
+        while (this.beat.next && this.beat.next.time<this.currentTime) this.beat = this.beat.next;
+        if (oldBeat !== this.beat){
           if (metronome.source){
           metronome.source.disconnect();
           metronome.source.stop();
           }
-
-          const time = this.beats[this.beatIdx][0]-this.currentTime+0.05;
-          const tickIdx = this.beats[this.beatIdx][2] === 1 ? 1 : 0;
+          const time = this.beat.time-this.currentTime+0.05;
+          const tickIdx = this.beat.bar === 1 ? 1 : 0;
           metronome.source = new AudioBufferSourceNode(ac, {buffer:this.sticks[tickIdx]});
           metronome.source.connect(metronome.gainNode);
           metronome.source.start(ac.currentTime+time,0);
-
         }
         for (let [i,track] of tracks.entries()){
           if (!data){
@@ -277,7 +313,8 @@ export default {
     pause(){
       if (!this.playing) return;
       this.playing=false;
-      for (let track of this.tracks){
+      const {tracks, metronome, beat} = this;
+      for (let track of tracks){
         track.source.disconnect();
         track.source.stop();
         track.source = null;
@@ -285,6 +322,7 @@ export default {
       metronome.source.disconnect();
       metronome.source.stop();
       metronome.source=null;
+      if (beat.onPause) beat = beat.onPause;
     },
     next(){
       this.pause();
@@ -308,11 +346,13 @@ export default {
       const spec = bar.split('/').map(s=>parseInt(s));
       spec.push(1);
       // first find all bars that meet the bar spec
-      const beats = this.beats.filter(b=>b[1]===spec[0]&&b[2]===1)
+      const beats = [];
+      for (let b = firstBeat; b.next; b=b.next) if (b.bar === spec[0] && b.beat === 1) beats.push(b);
+
       if (beats.legnth===0) return;
-      const rpt = beats.filter(b=>b[3]===spec[1]);
-      this.beatIdx = rpt?.[0]?.[4] || beats?.[0]?.[4] || this.beatIdx;
-      this.currentTime = this.beats[this.beatIdx][0];
+      const rpt = beats.filter(b => b.repeat === spec[1]);
+      this.beat = rpt?.[0] || beats?.[0] || this.beat;
+      this.currentTime = this.beat.time;
       this.$refs.time.value = this.currentTime / this.duration;
     },
     editBarQuit(){
@@ -403,11 +443,11 @@ export default {
       
       <div class=beat-title>Beat</div>
       <div class=beat-background />
-      <div class=beat v-if=beats[beatIdx]>{{beats[beatIdx][2]}}</div>
+      <div class=beat v-if=beat>{{beat.beat}}</div>
       <div class=time-title>Time</div>
       <div class=time-background />
-      <div class=time>{{currentTime.toFixed(2)}}</div>
-      <div class=play><span v-if=playing @click="pause" class="material-icons">pause</span><span v-else @click="play" class="material-icons">play_arrow</span></div>
+      <div class=time>{{displayTime.toFixed(2)}}</div>
+      <div class=play><span v-if=playing @click="pause" class="material-icons">pause</span><span v-else @click="prePlay" class="material-icons">play_arrow</span></div>
       <label class=timeline>
         <input class=time ref=time type=range min=0 max=1 step=0.001 value=0 @input="setTime">
       </label>
