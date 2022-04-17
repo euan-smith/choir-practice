@@ -352,7 +352,7 @@ export default {
       spec.push(1);
       // first find all bars that meet the bar spec
       const beats = [];
-      for (let b = firstBeat; b.next; b=b.next) if (b.bar === spec[0] && b.beat === 1) beats.push(b);
+      for (let b = this.firstBeat; b.next; b=b.next) if (b.bar === spec[0] && b.beat === 1) beats.push(b);
 
       if (beats.legnth===0) return;
       const rpt = beats.filter(b => b.repeat === spec[1]);

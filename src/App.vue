@@ -55,19 +55,18 @@ export default {
     readScores(){
       const s = localStorage.getItem('scores');
       try{
-        this.scoreList = JSON.parse(s);
+        this.scoreList = JSON.parse(s) || {};
       } catch(e){}
     },
     writeScores(){
+      console.log({...this.scoreList});
       localStorage.setItem('scores',JSON.stringify(this.scoreList));
     },
     addScore(name, title){
-      if (!this.scoreList) return;
       this.scoreList[name]=title;
       this.writeScores();
     },
     removeScore(name){
-      if (!this.scoreList) return;
       delete this.scoreList[name];
       this.writeScores();
     },
