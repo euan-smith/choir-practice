@@ -87,6 +87,7 @@ export default {
   },
   methods:{
     parseBars(){
+      const lastBeat = this.beat;
       const preBeat={};
       let cBeat=preBeat;
       let time=0, beat=1, bar=1, tempo=100, timeSig=4;
@@ -108,6 +109,7 @@ export default {
       this.firstBeat.prev = null;
       this.beat = this.firstBeat;
       this.duration = time;
+      if (lastBeat) this.seekBar([lastBeat.bar, lastBeat.repeat || 1]);
     },
     async load(){
       this.ac=null;
@@ -351,6 +353,9 @@ export default {
       const spec = bar.split('/').map(s=>parseInt(s));
       spec.push(1);
       // first find all bars that meet the bar spec
+      this.seekBar(spec);
+    },
+    seekBar(spec){
       const beats = [];
       for (let b = this.firstBeat; b.next; b=b.next) if (b.bar === spec[0] && b.beat === 1) beats.push(b);
 
