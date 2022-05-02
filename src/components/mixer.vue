@@ -54,6 +54,7 @@ export default {
       ac:null,
       pitchShift:null,
       loading:false,
+      loaded:{data:0, decoded:0},
       tracks:[],
       currentTime:0,
       playing:false,
@@ -112,20 +113,53 @@ export default {
       if (lastBeat) this.seekBar([lastBeat.bar, lastBeat.repeat || 1]);
     },
     async load(){
+      this.loaded = {data:0, decoded:0};
+      const parts = this.parts.map(p=>({...p, size:1, data:0, decoded:false}))
       this.ac=null;
       const ac = new AudioContext();
       this.loading = true;
-      // const start=performance.now();
       this.decoded = await Promise.all(
-        this.parts.map(
-          part=>fetch(part.url)
-          // .then(a=>(console.log(part.name,'fetch',performance.now()-start),a))
-          .then(r=>r.arrayBuffer())
-          // .then(a=>(console.log(part.name,'ab',performance.now()-start),a))
-          .then(b=>ac.decodeAudioData(b))
-          // .then(a=>(console.log(part.name,'decoded',performance.now()-start),a))
+        parts.map(
+          async part => {
+            const response = await fetch(part.url);
+            const reader = response.body.getReader();
+
+            // Step 2: get total length
+            part.size = +response.headers.get('Content-Length');
+
+            // Step 3: read the data
+            part.data = 0; // received that many bytes at the moment
+            let chunks = []; // array of received binary chunks (comprises the body)
+            while(true) {
+              const {done, value} = await reader.read();
+              if (done) break;
+              chunks.push(value);
+              part.data += value.length;
+              let tot=0, dl=0;
+              for(let p of parts){tot+=p.size; dl+=p.data};
+              this.loaded.data = dl/tot;
+
+              // console.log(`Received ${part.name} ${part.data} of ${part.size}`)
+            }
+
+            // Step 4: concatenate chunks into single Uint8Array
+            let chunksAll = new Uint8Array(part.size); // (4.1)
+            let position = 0;
+            for(let chunk of chunks) {
+              chunksAll.set(chunk, position); // (4.2)
+              position += chunk.length;
+            }
+
+            const buffer = chunksAll.buffer;
+            // console.log('Decoding '+part.name)
+            const rtn = await ac.decodeAudioData(buffer);
+            this.loaded.decoded += 1/parts.length;
+            // console.log('Decoded '+part.name)
+            return rtn;
+          }
         )
       );
+      // console.log('getting sticks')
       this.sticks = await Promise.all(
         [stick4cs,stick4d].map(
           file=>fetch(file)
@@ -133,6 +167,7 @@ export default {
           .then(b=>ac.decodeAudioData(b))
         )
       )
+      // console.log('got sticks')
       if (!this.tracks || this.tracks.length !== this.decoded.length) this.tracks=this.parts.map(p=>({vol:p.volume, solo:false, mute:false}));
       for(let n=0; n<this.parts.length; n++) this.$refs.partvol[n].setTo(this.tracks[n].vol);
       this.loading = false;
@@ -401,7 +436,7 @@ export default {
 <template>
   <div class=mixer>
     <div class=loading v-if=loading>
-      <span>LOADING...</span>
+      <span>LOADING... {{((loaded.data + loaded.decoded)*50).toFixed(0)}} %</span>
     </div>
     <div class=tracks>
       <div class=track v-for="(part,i) of parts" :key="i" >
