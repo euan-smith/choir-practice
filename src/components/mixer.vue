@@ -606,7 +606,7 @@ export default {
     font-size:56px;
   }
   .controls>.next{
-    grid-area: 1/6/2/7;
+    grid-area: 1/-2/2/-1;
     font-size:56px;
     cursor:pointer;
   }
