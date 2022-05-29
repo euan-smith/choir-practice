@@ -336,13 +336,15 @@ export default {
           const tot = Math.max(...data);
           const lev = Math.pow(Math.max(0,Math.min(1,(tot-128) / 127)),0.67)*100;
           if (!ctxs[i]) ctxs[i] = this.$refs.levels[i].getContext('2d')
-          const c=ctxs[i];
-          c.clearRect(0,0,100,100);
-          c.fillStyle="#822";
-          if (c.canvas.clientWidth>c.canvas.clientHeight){
-            c.fillRect(0,25,lev,75);
-          } else {
-            c.fillRect(25,100-lev,75,100);
+          else {
+            const c=ctxs[i];
+            c.clearRect(0,0,100,100);
+            c.fillStyle="#822";
+            if (c.canvas.clientWidth>c.canvas.clientHeight){
+              c.fillRect(0,25,lev,75);
+            } else {
+              c.fillRect(25,100-lev,75,100);
+            }
           }
         }
         await new Promise(requestAnimationFrame);
