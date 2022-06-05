@@ -13,6 +13,7 @@
  * <list
  */
 import Mixer from './components/mixer.vue';
+import { MIDIFile } from './components/midi';
 export default {
   components:{
     Mixer
@@ -81,6 +82,7 @@ export default {
       try{
         const data = await fetch('/'+q.score+'.json').then(r=>r.json());
         if (data.parts && data.bars){
+          // V1 of the file format
           this.title = data.title;
           this.scores = [{
             subtitle:'',

@@ -3,6 +3,7 @@
 import Volume from "./volume.vue";
 import stick4cs from "../assets/stick-4cs.mp3";
 import stick4d from "../assets/stick-4d.mp3";
+import {PartSource} from "./part"
 export default {
   components:{
     Volume
@@ -67,6 +68,7 @@ export default {
       newbar:null,
       lastNewbar:'',
       decoded:[],
+      duraction:0,
       sticks:[],
       metronome:{vol:1, on:false},
       playProm:null,
@@ -114,51 +116,15 @@ export default {
     },
     async load(){
       this.loaded = {data:0, decoded:0};
-      const parts = this.parts.map(p=>({...p, size:1, data:0, decoded:false}))
       this.ac=null;
       const ac = new AudioContext();
       this.loading = true;
-      this.decoded = await Promise.all(
-        parts.map(
-          async part => {
-            const response = await fetch(part.url);
-            const reader = response.body.getReader();
-
-            // Step 2: get total length
-            part.size = +response.headers.get('Content-Length');
-
-            // Step 3: read the data
-            part.data = 0; // received that many bytes at the moment
-            let chunks = []; // array of received binary chunks (comprises the body)
-            while(true) {
-              const {done, value} = await reader.read();
-              if (done) break;
-              chunks.push(value);
-              part.data += value.length;
-              let tot=0, dl=0;
-              for(let p of parts){tot+=p.size; dl+=p.data};
-              this.loaded.data = dl/tot;
-
-              // console.log(`Received ${part.name} ${part.data} of ${part.size}`)
-            }
-
-            // Step 4: concatenate chunks into single Uint8Array
-            let chunksAll = new Uint8Array(part.size); // (4.1)
-            let position = 0;
-            for(let chunk of chunks) {
-              chunksAll.set(chunk, position); // (4.2)
-              position += chunk.length;
-            }
-
-            const buffer = chunksAll.buffer;
-            // console.log('Decoding '+part.name)
-            const rtn = await ac.decodeAudioData(buffer);
-            this.loaded.decoded += 1/parts.length;
-            // console.log('Decoded '+part.name)
-            return rtn;
-          }
-        )
-      );
+      this.partSources = this.parts.map(p=>PartSource.fromUrl(p.url));
+      await Promise.all(this.partSources.map(d=>d.load(ac,part=>{
+        let tot=0, dl=0;
+        for(let p of this.partSources){tot+=p.bytes; dl+=p.received};
+        this.loaded.data = dl/tot;
+      }).then(()=>this.loaded.decoded += 1/this.partSources.length)))
       // console.log('getting sticks')
       this.sticks = await Promise.all(
         [stick4cs,stick4d].map(
@@ -168,24 +134,23 @@ export default {
         )
       )
       // console.log('got sticks')
-      if (!this.tracks || this.tracks.length !== this.decoded.length) this.tracks=this.parts.map(p=>({vol:p.volume, solo:false, mute:false}));
+      if (!this.tracks || this.tracks.length !== this.partSources.length) this.tracks=this.parts.map(p=>({vol:p.volume, solo:false, mute:false}));
       for(let n=0; n<this.parts.length; n++) this.$refs.partvol[n].setTo(this.tracks[n].vol);
       this.loading = false;
     },
     setupAudio(){
       const ac = this.ac = new AudioContext();
-      const {decoded,sticks} = this; 
-      for(let n = 0; n<decoded.length; ++n){
+      const {partSources,sticks} = this; 
+      for(let n = 0; n<partSources.length; ++n){
         const vol = this?.tracks?.[n]?.vol || 1;
         this.tracks[n] = {
           vol,
           solo:false,
           mute:false,
           ...this.tracks[n],
-          buffer:decoded[n],
+          partSource:partSources[n],
           anal: new AnalyserNode(ac,{fftSize:256}),
           gainNode: new GainNode(ac),
-          source:null,
           offset:0,
         }
       }
@@ -247,16 +212,12 @@ export default {
       });
       metronome.gainNode.gain.value = metronome.on || this.beat?.tickOn ? metronome.vol : 0;
     },
-    async play(){
+    play(){
       if (this.playing) return
       if (!this.ac) this.setupAudio();
       const {ac,tracks} = this;
       for (let track of tracks){
-        track.source = new AudioBufferSourceNode(ac, {
-          buffer:track.buffer,
-        });
-        track.source.connect(track.anal);
-        track.source.start(0,this.currentTime);
+        track.partSource.start(ac,track.anal,0,this.currentTime,this.duration);
       }
       const time = this.beat.time-this.currentTime+0.053;
       if (time>=0){
@@ -284,11 +245,7 @@ export default {
       this.setVols();
       const {ac,tracks} = this;
       for (let track of tracks){
-        track.source = new AudioBufferSourceNode(ac, {
-          buffer:track.buffer,
-        });
-        track.source.connect(track.anal);
-        track.source.start(ac.currentTime+start,this.currentTime);
+        track.partSource.start(ac,track.anal,start,this.currentTime);
       }
       this.currentTime-=start;
       const time = this.beat.time-this.currentTime+0.053;
@@ -305,7 +262,7 @@ export default {
       const {ac,tracks,metronome} = this;
       this.offset = this.currentTime - ac.currentTime
       this.playing=true;
-      tracks[0].source.onended=()=>this.playing=false;
+      tracks[0].partSource.onended=()=>this.playing=false;
       let binCount = null, data = null, ctxs=[];
       while (this.playing){
         this.currentTime = Math.min(ac.currentTime + this.offset, this.duration);
@@ -356,9 +313,7 @@ export default {
       await this.playProm;
       const {tracks, metronome, beat} = this;
       for (let track of tracks){
-        track.source.disconnect();
-        track.source.stop();
-        track.source = null;
+        track.partSource.stop();
       }
       metronome.source.disconnect();
       metronome.source.stop();
