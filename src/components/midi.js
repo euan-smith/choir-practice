@@ -463,194 +463,6 @@ MIDIEvents.createParser = function midiEventsCreateParser(stream, startAt, stric
 	};
 };
 
-// Return the buffer length needed to encode the given events
-MIDIEvents.writeToTrack = function midiEventsWriteToTrack(events, destination, strictMode) {
-	var index = 0;
-	var i;
-	var j;
-	var k;
-	var l;
-
-	// Converting each event to binary MIDI datas
-	for (i = 0, j = events.length; i < j; i++) {
-		// Writing delta value
-		if (events[i].delta >>> 28) {
-			throw Error('Event #' + i + ': Maximum delta time value reached (' +
-				events[i].delta + '/134217728 max)');
-		}
-		if (events[i].delta >>> 21) {
-			destination[index++] = ((events[i].delta >>> 21) & 0x7F) | 0x80;
-		}
-		if (events[i].delta >>> 14) {
-			destination[index++] = ((events[i].delta >>> 14) & 0x7F) | 0x80;
-		}
-		if (events[i].delta >>> 7) {
-			destination[index++] = ((events[i].delta >>> 7) & 0x7F) | 0x80;
-		}
-		destination[index++] = (events[i].delta & 0x7F);
-		// MIDI Events encoding
-		if (events[i].type === MIDIEvents.EVENT_MIDI) {
-			// Adding the byte of subtype + channel
-			destination[index++] = (events[i].subtype << 4) + events[i].channel;
-			// Adding the byte of the first params
-			destination[index++] = events[i].param1;
-			// Adding a byte for the optionnal second param
-			if (-1 !== MIDIEvents.MIDI_2PARAMS_EVENTS.indexOf(events[i].subtype)) {
-				destination[index++] = events[i].param2;
-			}
-			// META / SYSEX events encoding
-		} else {
-			// Adding the event type byte
-			destination[index++] = events[i].type;
-			// Adding the META event subtype byte
-			if (events[i].type === MIDIEvents.EVENT_META) {
-				destination[index++] = events[i].subtype;
-			}
-			// Writing the event length bytes
-			if (events[i].length >>> 28) {
-				throw Error('Event #' + i + ': Maximum length reached (' +
-					events[i].length + '/134217728 max)');
-			}
-			if (events[i].length >>> 21) {
-				destination[index++] = ((events[i].length >>> 21) & 0x7F) | 0x80;
-			}
-			if (events[i].length >>> 14) {
-				destination[index++] = ((events[i].length >>> 14) & 0x7F) | 0x80;
-			}
-			if (events[i].length >>> 7) {
-				destination[index++] = ((events[i].length >>> 7) & 0x7F) | 0x80;
-			}
-			destination[index++] = (events[i].length & 0x7F);
-			if (events[i].type === MIDIEvents.EVENT_META) {
-				switch (events[i].subtype) {
-				case MIDIEvents.EVENT_META_SEQUENCE_NUMBER:
-					destination[index++] = events[i].msb;
-					destination[index++] = events[i].lsb;
-					break;
-				case MIDIEvents.EVENT_META_TEXT:
-				case MIDIEvents.EVENT_META_COPYRIGHT_NOTICE:
-				case MIDIEvents.EVENT_META_TRACK_NAME:
-				case MIDIEvents.EVENT_META_INSTRUMENT_NAME:
-				case MIDIEvents.EVENT_META_LYRICS:
-				case MIDIEvents.EVENT_META_MARKER:
-				case MIDIEvents.EVENT_META_CUE_POINT:
-					for (k = 0, l = events[i].length; k < l; k++) {
-						destination[index++] = events[i].data[k];
-					}
-					break;
-				case MIDIEvents.EVENT_META_MIDI_CHANNEL_PREFIX:
-					destination[index++] = events[i].prefix;
-					break;
-				case MIDIEvents.EVENT_META_END_OF_TRACK:
-					break;
-				case MIDIEvents.EVENT_META_SET_TEMPO:
-					destination[index++] = (events[i].tempo >> 16);
-					destination[index++] = (events[i].tempo >> 8) & 0xFF;
-					destination[index++] = events[i].tempo & 0xFF;
-					break;
-				case MIDIEvents.EVENT_META_SMTPE_OFFSET:
-					if (strictMode && 23 < events[i].hour) {
-						throw new Error('Event #' + i + ': SMTPE offset hour value must be' +
-							' part of 0-23.');
-					}
-					destination[index++] = events[i].hour;
-					if (strictMode && 59 < events[i].minutes) {
-						throw new Error('Event #' + i + ': SMTPE offset minutes value must' +
-							' be part of 0-59.');
-					}
-					destination[index++] = events[i].minutes;
-					if (strictMode && 59 < events[i].seconds) {
-						throw new Error('Event #' + i + ': SMTPE offset seconds value must' +
-							' be part of 0-59.');
-					}
-					destination[index++] = events[i].seconds;
-					if (strictMode && 30 < events[i].frames) {
-						throw new Error('Event #' + i + ': SMTPE offset frames amount must' +
-							' be part of 0-30.');
-					}
-					destination[index++] = events[i].frames;
-					if (strictMode && 99 < events[i].subframes) {
-						throw new Error('Event #' + i + ': SMTPE offset subframes amount' +
-							' must be part of 0-99.');
-					}
-					destination[index++] = events[i].subframes;
-					break;
-				case MIDIEvents.EVENT_META_KEY_SIGNATURE:
-					if ('number' != typeof events[i].key || -7 > events[i].key ||
-						7 < events[i].scale) {
-						throw new Error('Event #' + i + ':The key signature key must be' +
-							' between -7 and 7');
-					}
-					if ('number' !== typeof events[i].scale ||
-						0 > events[i].scale || 1 < events[i].scale) {
-						throw new Error('Event #' + i + ':' +
-							'The key signature scale must be 0 or 1');
-					}
-					destination[index++] = events[i].key;
-					destination[index++] = events[i].scale;
-					break;
-					// Not implemented
-				case MIDIEvents.EVENT_META_TIME_SIGNATURE:
-				case MIDIEvents.EVENT_META_SEQUENCER_SPECIFIC:
-				default:
-					for (k = 0, l = events[i].length; k < l; k++) {
-						destination[index++] = events[i].data[k];
-					}
-					break;
-				}
-				// Adding bytes corresponding to the sysex event datas
-			} else {
-				for (k = 0, l = events[i].length; k < l; k++) {
-					destination[index++] = events[i].data[k];
-				}
-			}
-		}
-	}
-};
-
-// Return the buffer length needed to encode the given events
-MIDIEvents.getRequiredBufferLength = function (events) {
-	var bufferLength = 0;
-	var i = 0;
-	var j;
-
-	// Calculating the track size by adding events lengths
-	for (i = 0, j = events.length; i < j; i++) {
-		// Computing necessary bytes to encode the delta value
-		bufferLength +=
-		events[i].delta >>> 21 ? 4 :
-		events[i].delta >>> 14 ? 3 :
-		events[i].delta >>> 7 ? 2 : 1;
-		// MIDI Events have various fixed lengths
-		if (events[i].type === MIDIEvents.EVENT_MIDI) {
-			// Adding a byte for subtype + channel
-			bufferLength++;
-			// Adding a byte for the first params
-			bufferLength++;
-			// Adding a byte for the optionnal second param
-			if (-1 !== MIDIEvents.MIDI_2PARAMS_EVENTS.indexOf(events[i].subtype)) {
-				bufferLength++;
-			}
-			// META / SYSEX events lengths are self defined
-		} else {
-			// Adding a byte for the event type
-			bufferLength++;
-			// Adding a byte for META events subtype
-			if (events[i].type === MIDIEvents.EVENT_META) {
-				bufferLength++;
-			}
-			// Adding necessary bytes to encode the length
-			bufferLength +=
-			events[i].length >>> 21 ? 4 :
-			events[i].length >>> 14 ? 3 :
-			events[i].length >>> 7 ? 2 : 1;
-			// Adding bytes corresponding to the event length
-			bufferLength += events[i].length;
-		}
-	}
-	return bufferLength;
-};
-
 ///...........................................
 
 // MIDIFileHeader : Read and edit a MIDI header chunk in a given ArrayBuffer
@@ -663,48 +475,22 @@ export class MIDIFileHeader {
   static TICKS_PER_BEAT = 2;
   constructor(buffer) {
     let a;
-    // No buffer creating him
-    if (!buffer) {
-      a = new Uint8Array(MIDIFileHeader.HEADER_LENGTH);
-      // Adding the header id (MThd)
-      a[0] = 0x4D;
-      a[1] = 0x54;
-      a[2] = 0x68;
-      a[3] = 0x64;
-      // Adding the header chunk size
-      a[4] = 0x00;
-      a[5] = 0x00;
-      a[6] = 0x00;
-      a[7] = 0x06;
-      // Adding the file format (1 here cause it's the most commonly used)
-      a[8] = 0x00;
-      a[9] = 0x01;
-      // Adding the track count (1 cause it's a new file)
-      a[10] = 0x00;
-      a[11] = 0x01;
-      // Adding the time division (192 ticks per beat)
-      a[12] = 0x00;
-      a[13] = 0xC0;
-      // saving the buffer
-      this.datas = new DataView(a.buffer, 0, MIDIFileHeader.HEADER_LENGTH);
-      // Parsing the given buffer
-    } else {
-      if (!(buffer instanceof ArrayBuffer)) {
-        throw Error('Invalid buffer received.');
-      }
-      this.datas = new DataView(buffer, 0, MIDIFileHeader.HEADER_LENGTH);
-      // Reading MIDI header chunk
-      if (!(
-        'M' === String.fromCharCode(this.datas.getUint8(0)) &&
-        'T' === String.fromCharCode(this.datas.getUint8(1)) &&
-        'h' === String.fromCharCode(this.datas.getUint8(2)) &&
-        'd' === String.fromCharCode(this.datas.getUint8(3)))) {
-        throw new Error('Invalid MIDIFileHeader : MThd prefix not found');
-      }
-      // Reading chunk length
-      if (6 !== this.datas.getUint32(4)) {
-        throw new Error('Invalid MIDIFileHeader : Chunk length must be 6');
-      }
+
+    if (!(buffer instanceof ArrayBuffer)) {
+      throw Error('Invalid buffer received.');
+    }
+    this.datas = new DataView(buffer, 0, MIDIFileHeader.HEADER_LENGTH);
+    // Reading MIDI header chunk
+    if (!(
+      'M' === String.fromCharCode(this.datas.getUint8(0)) &&
+      'T' === String.fromCharCode(this.datas.getUint8(1)) &&
+      'h' === String.fromCharCode(this.datas.getUint8(2)) &&
+      'd' === String.fromCharCode(this.datas.getUint8(3)))) {
+      throw new Error('Invalid MIDIFileHeader : MThd prefix not found');
+    }
+    // Reading chunk length
+    if (6 !== this.datas.getUint32(4)) {
+      throw new Error('Invalid MIDIFileHeader : Chunk length must be 6');
     }
   }
   // MIDI file format
@@ -818,64 +604,41 @@ export class MIDIFileTrack {
     let a;
     let trackLength;
 
-    // no buffer, creating him
-    if (!buffer) {
-      a = new Uint8Array(12);
-      // Adding the empty track header (MTrk)
-      a[0] = 0x4D;
-      a[1] = 0x54;
-      a[2] = 0x72;
-      a[3] = 0x6B;
-      // Adding the empty track size (4)
-      a[4] = 0x00;
-      a[5] = 0x00;
-      a[6] = 0x00;
-      a[7] = 0x04;
-      // Adding the track end event
-      a[8] = 0x00;
-      a[9] = 0xFF;
-      a[10] = 0x2F;
-      a[11] = 0x00;
-      // Saving the buffer
-      this.datas = new DataView(a.buffer, 0, MIDIFileTrack.HDR_LENGTH + 4);
-      // parsing the given buffer
-    } else {
-      if (!(buffer instanceof ArrayBuffer)) {
-        throw new Error('Invalid buffer received.');
-      }
-      // Buffer length must size at least like an  empty track (8+3bytes)
-      if (12 > buffer.byteLength - start) {
-        throw new Error('Invalid MIDIFileTrack (0x' + start.toString(16) + ') :' +
-          ' Buffer length must size at least 12bytes');
-      }
-      // Creating a temporary view to read the track header
-      this.datas = new DataView(buffer, start, MIDIFileTrack.HDR_LENGTH);
-      // Reading MIDI track header chunk
-      if (!(
-        'M' === String.fromCharCode(this.datas.getUint8(0)) &&
-        'T' === String.fromCharCode(this.datas.getUint8(1)) &&
-        'r' === String.fromCharCode(this.datas.getUint8(2)) &&
-        'k' === String.fromCharCode(this.datas.getUint8(3)))) {
-        throw new Error('Invalid MIDIFileTrack (0x' + start.toString(16) + ') :' +
-          ' MTrk prefix not found');
-      }
-      // Reading the track length
-      trackLength = this.getTrackLength();
-      if (buffer.byteLength - start < trackLength) {
-        throw new Error('Invalid MIDIFileTrack (0x' + start.toString(16) + ') :' +
-          ' The track size exceed the buffer length.');
-      }
-      // Creating the final DataView
-      this.datas = new DataView(buffer, start, MIDIFileTrack.HDR_LENGTH + trackLength);
-      // Trying to find the end of track event
-      if (!(
-        0xFF === this.datas.getUint8(MIDIFileTrack.HDR_LENGTH + (trackLength - 3)) &&
-        0x2F === this.datas.getUint8(MIDIFileTrack.HDR_LENGTH + (trackLength - 2)) &&
-        0x00 === this.datas.getUint8(MIDIFileTrack.HDR_LENGTH + (trackLength - 1)))) {
-        throw new Error('Invalid MIDIFileTrack (0x' + start.toString(16) + ') :' +
-          ' No track end event found at the expected index' +
-          ' (' + (MIDIFileTrack.HDR_LENGTH + (trackLength - 1)).toString(16) + ').');
-      }
+    if (!(buffer instanceof ArrayBuffer)) {
+      throw new Error('Invalid buffer received.');
+    }
+    // Buffer length must size at least like an  empty track (8+3bytes)
+    if (12 > buffer.byteLength - start) {
+      throw new Error('Invalid MIDIFileTrack (0x' + start.toString(16) + ') :' +
+        ' Buffer length must size at least 12bytes');
+    }
+    // Creating a temporary view to read the track header
+    this.datas = new DataView(buffer, start, MIDIFileTrack.HDR_LENGTH);
+    // Reading MIDI track header chunk
+    if (!(
+      'M' === String.fromCharCode(this.datas.getUint8(0)) &&
+      'T' === String.fromCharCode(this.datas.getUint8(1)) &&
+      'r' === String.fromCharCode(this.datas.getUint8(2)) &&
+      'k' === String.fromCharCode(this.datas.getUint8(3)))) {
+      throw new Error('Invalid MIDIFileTrack (0x' + start.toString(16) + ') :' +
+        ' MTrk prefix not found');
+    }
+    // Reading the track length
+    trackLength = this.getTrackLength();
+    if (buffer.byteLength - start < trackLength) {
+      throw new Error('Invalid MIDIFileTrack (0x' + start.toString(16) + ') :' +
+        ' The track size exceed the buffer length.');
+    }
+    // Creating the final DataView
+    this.datas = new DataView(buffer, start, MIDIFileTrack.HDR_LENGTH + trackLength);
+    // Trying to find the end of track event
+    if (!(
+      0xFF === this.datas.getUint8(MIDIFileTrack.HDR_LENGTH + (trackLength - 3)) &&
+      0x2F === this.datas.getUint8(MIDIFileTrack.HDR_LENGTH + (trackLength - 2)) &&
+      0x00 === this.datas.getUint8(MIDIFileTrack.HDR_LENGTH + (trackLength - 1)))) {
+      throw new Error('Invalid MIDIFileTrack (0x' + start.toString(16) + ') :' +
+        ' No track end event found at the expected index' +
+        ' (' + (MIDIFileTrack.HDR_LENGTH + (trackLength - 1)).toString(16) + ').');
     }
   }
   // Track length
@@ -961,41 +724,32 @@ export class MIDIFile {
     var curIndex;
     var i;
     var j;
-
-    // If not buffer given, creating a new MIDI file
-    if (!buffer) {
-      // Creating the content
-      this.header = new MIDIFileHeader();
-      this.tracks = [new MIDIFileTrack()];
-      // if a buffer is provided, parsing him
-    } else {
-      buffer = ensureArrayBuffer(buffer);
-      // Minimum MIDI file size is a headerChunk size (14bytes)
-      // and an empty track (8+3bytes)
-      if (25 > buffer.byteLength) {
-        throw new Error('A buffer of a valid MIDI file must have, at least, a' +
-          ' size of 25bytes.');
+    buffer = ensureArrayBuffer(buffer);
+    // Minimum MIDI file size is a headerChunk size (14bytes)
+    // and an empty track (8+3bytes)
+    if (25 > buffer.byteLength) {
+      throw new Error('A buffer of a valid MIDI file must have, at least, a' +
+        ' size of 25bytes.');
+    }
+    // Reading header
+    this.header = new MIDIFileHeader(buffer, strictMode);
+    this.tracks = [];
+    curIndex = MIDIFileHeader.HEADER_LENGTH;
+    // Reading tracks
+    for (i = 0, j = this.header.getTracksCount(); i < j; i++) {
+      // Testing the buffer length
+      if (strictMode && curIndex >= buffer.byteLength - 1) {
+        throw new Error('Couldn\'t find datas corresponding to the track #' + i + '.');
       }
-      // Reading header
-      this.header = new MIDIFileHeader(buffer, strictMode);
-      this.tracks = [];
-      curIndex = MIDIFileHeader.HEADER_LENGTH;
-      // Reading tracks
-      for (i = 0, j = this.header.getTracksCount(); i < j; i++) {
-        // Testing the buffer length
-        if (strictMode && curIndex >= buffer.byteLength - 1) {
-          throw new Error('Couldn\'t find datas corresponding to the track #' + i + '.');
-        }
-        // Creating the track object
-        track = new MIDIFileTrack(buffer, curIndex, strictMode);
-        this.tracks.push(track);
-        // Updating index to the track end
-        curIndex += track.getTrackLength() + 8;
-      }
-      // Testing integrity : curIndex should be at the end of the buffer
-      if (strictMode && curIndex !== buffer.byteLength) {
-        throw new Error('It seems that the buffer contains too much datas.');
-      }
+      // Creating the track object
+      track = new MIDIFileTrack(buffer, curIndex, strictMode);
+      this.tracks.push(track);
+      // Updating index to the track end
+      curIndex += track.getTrackLength() + 8;
+    }
+    // Testing integrity : curIndex should be at the end of the buffer
+    if (strictMode && curIndex !== buffer.byteLength) {
+      throw new Error('It seems that the buffer contains too much datas.');
     }
   }
   startNote(event, song) {
