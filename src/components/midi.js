@@ -1,201 +1,38 @@
-var UTF8 = {
-	// non UTF8 encoding detection (cf README file for details)
-	isNotUTF8(bytes, byteOffset, byteLength) {
-		try {
-			UTF8.getStringFromBytes(bytes, byteOffset, byteLength, true);
-		} catch (e) {
-			return true;
-		}
-		return false;
-	},
-	// UTF8 decoding functions
-	getCharLength(theByte) {
-		// 4 bytes encoded char (mask 11110000)
-		if (0xF0 == (theByte & 0xF0)) {
-			return 4;
-			// 3 bytes encoded char (mask 11100000)
-		} else if (0xE0 == (theByte & 0xE0)) {
-			return 3;
-			// 2 bytes encoded char (mask 11000000)
-		} else if (0xC0 == (theByte & 0xC0)) {
-			return 2;
-			// 1 bytes encoded char
-		} else if (theByte == (theByte & 0x7F)) {
-			return 1;
-		}
-		return 0;
-	},
-	getCharCode(bytes, byteOffset, charLength) {
-		var charCode = 0,
-		mask = '';
-		byteOffset = byteOffset || 0;
-		// validate that the array has at least one byte in it
-		if (bytes.length - byteOffset <= 0) {
-			throw new Error('No more characters remaining in array.');
-		}
-		// Retrieve charLength if not given
-		charLength = charLength || UTF8.getCharLength(bytes[byteOffset]);
-		if (charLength == 0) {
-			throw new Error(bytes[byteOffset].toString(2) + ' is not a significative' +
-				' byte (offset:' + byteOffset + ').');
-		}
-		// Return byte value if charlength is 1
-		if (1 === charLength) {
-			return bytes[byteOffset];
-		}
-		// validate that the array has enough bytes to make up this character
-		if (bytes.length - byteOffset < charLength) {
-			throw new Error('Expected at least ' + charLength + ' bytes remaining in array.');
-		}
-		// Test UTF8 integrity
-		mask = '00000000'.slice(0, charLength) + 1 + '00000000'.slice(charLength + 1);
-		if (bytes[byteOffset] & (parseInt(mask, 2))) {
-			throw Error('Index ' + byteOffset + ': A ' + charLength + ' bytes' +
-				' encoded char' + ' cannot encode the ' + (charLength + 1) + 'th rank bit to 1.');
-		}
-		// Reading the first byte
-		mask = '0000'.slice(0, charLength + 1) + '11111111'.slice(charLength + 1);
-		charCode += (bytes[byteOffset] & parseInt(mask, 2)) << ((--charLength) * 6);
-		// Reading the next bytes
-		while (charLength) {
-			if (0x80 !== (bytes[byteOffset + 1] & 0x80)
-				 || 0x40 === (bytes[byteOffset + 1] & 0x40)) {
-				throw Error('Index ' + (byteOffset + 1) + ': Next bytes of encoded char'
-					 + ' must begin with a "10" bit sequence.');
-			}
-			charCode += ((bytes[++byteOffset] & 0x3F) << ((--charLength) * 6));
-		}
-		return charCode;
-	},
-	getStringFromBytes(bytes, byteOffset, byteLength, strict) {
-		var charLength,
-		chars = [];
-		byteOffset = byteOffset | 0;
-		byteLength = ('number' === typeof byteLength ?
-			byteLength :
-			bytes.byteLength || bytes.length);
-		for (; byteOffset < byteLength; byteOffset++) {
-			charLength = UTF8.getCharLength(bytes[byteOffset]);
-			if (byteOffset + charLength > byteLength) {
-				if (strict) {
-					throw Error('Index ' + byteOffset + ': Found a ' + charLength +
-						' bytes encoded char declaration but only ' +
-						(byteLength - byteOffset) + ' bytes are available.');
-				}
-			} else {
-				chars.push(String.fromCodePoint(
-						UTF8.getCharCode(bytes, byteOffset, charLength, strict)));
-			}
-			byteOffset += charLength - 1;
-		}
-		return chars.join('');
-	},
-	// UTF8 encoding functions
-	getBytesForCharCode(charCode) {
-		if (charCode < 128) {
-			return 1;
-		} else if (charCode < 2048) {
-			return 2;
-		} else if (charCode < 65536) {
-			return 3;
-		} else if (charCode < 2097152) {
-			return 4;
-		}
-		throw new Error('CharCode ' + charCode + ' cannot be encoded with UTF8.');
-	},
-	setBytesFromCharCode(charCode, bytes, byteOffset, neededBytes) {
-		charCode = charCode | 0;
-		bytes = bytes || [];
-		byteOffset = byteOffset | 0;
-		neededBytes = neededBytes || UTF8.getBytesForCharCode(charCode);
-		// Setting the charCode as it to bytes if the byte length is 1
-		if (1 == neededBytes) {
-			bytes[byteOffset] = charCode;
-		} else {
-			// Computing the first byte
-			bytes[byteOffset++] =
-				(parseInt('1111'.slice(0, neededBytes), 2) << 8 - neededBytes) +
-			(charCode >>> ((--neededBytes) * 6));
-			// Computing next bytes
-			for (; neededBytes > 0; ) {
-				bytes[byteOffset++] = ((charCode >>> ((--neededBytes) * 6)) & 0x3F) | 0x80;
-			}
-		}
-		return bytes;
-	},
-	setBytesFromString(string, bytes, byteOffset, byteLength, strict) {
-		string = string || '';
-		bytes = bytes || [];
-		byteOffset = byteOffset | 0;
-		byteLength = ('number' === typeof byteLength ?
-			byteLength :
-			bytes.byteLength || Infinity);
-		for (var i = 0, j = string.length; i < j; i++) {
-			var neededBytes = UTF8.getBytesForCharCode(string[i].codePointAt(0));
-			if (strict && byteOffset + neededBytes > byteLength) {
-				throw new Error('Not enought bytes to encode the char "' + string[i] +
-					'" at the offset "' + byteOffset + '".');
-			}
-			UTF8.setBytesFromCharCode(string[i].codePointAt(0),
-				bytes, byteOffset, neededBytes, strict);
-			byteOffset += neededBytes;
-		}
-		return bytes;
-	}
-};
-
-///..................................................................
-
-// MIDIEvents : Read and edit events from various sources (ArrayBuffer, Stream)
-function MIDIEvents() {
-	throw new Error('MIDIEvents function not intended to be run.');
-}
+import { decodeUTF8 } from "./UTF8";
 
 // Static constants
 // Event types
-MIDIEvents.EVENT_META = 0xFF;
-MIDIEvents.EVENT_SYSEX = 0xF0;
-MIDIEvents.EVENT_DIVSYSEX = 0xF7;
-MIDIEvents.EVENT_MIDI = 0x8;
+const EVENT_META = 0xFF;
+const EVENT_SYSEX = 0xF0;
+const EVENT_DIVSYSEX = 0xF7;
+const EVENT_MIDI = 0x8;
 // Meta event types
-MIDIEvents.EVENT_META_SEQUENCE_NUMBER = 0x00;
-MIDIEvents.EVENT_META_TEXT = 0x01;
-MIDIEvents.EVENT_META_COPYRIGHT_NOTICE = 0x02;
-MIDIEvents.EVENT_META_TRACK_NAME = 0x03;
-MIDIEvents.EVENT_META_INSTRUMENT_NAME = 0x04;
-MIDIEvents.EVENT_META_LYRICS = 0x05;
-MIDIEvents.EVENT_META_MARKER = 0x06;
-MIDIEvents.EVENT_META_CUE_POINT = 0x07;
-MIDIEvents.EVENT_META_MIDI_CHANNEL_PREFIX = 0x20;
-MIDIEvents.EVENT_META_END_OF_TRACK = 0x2F;
-MIDIEvents.EVENT_META_SET_TEMPO = 0x51;
-MIDIEvents.EVENT_META_SMTPE_OFFSET = 0x54;
-MIDIEvents.EVENT_META_TIME_SIGNATURE = 0x58;
-MIDIEvents.EVENT_META_KEY_SIGNATURE = 0x59;
-MIDIEvents.EVENT_META_SEQUENCER_SPECIFIC = 0x7F;
+const EVENT_META_SEQUENCE_NUMBER = 0x00;
+const EVENT_META_TEXT = 0x01;
+const EVENT_META_COPYRIGHT_NOTICE = 0x02;
+const EVENT_META_TRACK_NAME = 0x03;
+const EVENT_META_INSTRUMENT_NAME = 0x04;
+const EVENT_META_LYRICS = 0x05;
+const EVENT_META_MARKER = 0x06;
+const EVENT_META_CUE_POINT = 0x07;
+const EVENT_META_MIDI_CHANNEL_PREFIX = 0x20;
+const EVENT_META_END_OF_TRACK = 0x2F;
+const EVENT_META_SET_TEMPO = 0x51;
+const EVENT_META_SMTPE_OFFSET = 0x54;
+const EVENT_META_TIME_SIGNATURE = 0x58;
+const EVENT_META_KEY_SIGNATURE = 0x59;
+const EVENT_META_SEQUENCER_SPECIFIC = 0x7F;
 // MIDI event types
-MIDIEvents.EVENT_MIDI_NOTE_OFF = 0x8;
-MIDIEvents.EVENT_MIDI_NOTE_ON = 0x9;
-MIDIEvents.EVENT_MIDI_NOTE_AFTERTOUCH = 0xA;
-MIDIEvents.EVENT_MIDI_CONTROLLER = 0xB;
-MIDIEvents.EVENT_MIDI_PROGRAM_CHANGE = 0xC;
-MIDIEvents.EVENT_MIDI_CHANNEL_AFTERTOUCH = 0xD;
-MIDIEvents.EVENT_MIDI_PITCH_BEND = 0xE;
-// MIDI event sizes
-MIDIEvents.MIDI_1PARAM_EVENTS = [
-	MIDIEvents.EVENT_MIDI_PROGRAM_CHANGE,
-	MIDIEvents.EVENT_MIDI_CHANNEL_AFTERTOUCH,
-];
-MIDIEvents.MIDI_2PARAMS_EVENTS = [
-	MIDIEvents.EVENT_MIDI_NOTE_OFF,
-	MIDIEvents.EVENT_MIDI_NOTE_ON,
-	MIDIEvents.EVENT_MIDI_NOTE_AFTERTOUCH,
-	MIDIEvents.EVENT_MIDI_CONTROLLER,
-	MIDIEvents.EVENT_MIDI_PITCH_BEND,
-];
+const EVENT_MIDI_NOTE_OFF = 0x8;
+const EVENT_MIDI_NOTE_ON = 0x9;
+const EVENT_MIDI_NOTE_AFTERTOUCH = 0xA;
+const EVENT_MIDI_CONTROLLER = 0xB;
+const EVENT_MIDI_PROGRAM_CHANGE = 0xC;
+const EVENT_MIDI_CHANNEL_AFTERTOUCH = 0xD;
+const EVENT_MIDI_PITCH_BEND = 0xE;
 
 // Create an event stream parser
-MIDIEvents.createParser = function midiEventsCreateParser(stream, startAt, strictMode) {
+function midiEventsCreateParser(stream, startAt, strictMode) {
 	// Private vars
 	// Common vars
 	var eventTypeByte;
@@ -282,39 +119,39 @@ MIDIEvents.createParser = function midiEventsCreateParser(stream, startAt, stric
 			eventTypeByte = stream.readUint8();
 			if (0xF0 === (eventTypeByte & 0xF0)) {
 				// Meta events
-				if (eventTypeByte === MIDIEvents.EVENT_META) {
-					event.type = MIDIEvents.EVENT_META;
+				if (eventTypeByte === EVENT_META) {
+					event.type = EVENT_META;
 					event.subtype = stream.readUint8();
 					event.length = stream.readVarInt();
 					switch (event.subtype) {
-					case MIDIEvents.EVENT_META_SEQUENCE_NUMBER:
+					case EVENT_META_SEQUENCE_NUMBER:
 						if (strictMode && 2 !== event.length) {
 							throw new Error(stream.pos() + ' Bad metaevent length.');
 						}
 						event.msb = stream.readUint8();
 						event.lsb = stream.readUint8();
 						return event;
-					case MIDIEvents.EVENT_META_TEXT:
-					case MIDIEvents.EVENT_META_COPYRIGHT_NOTICE:
-					case MIDIEvents.EVENT_META_TRACK_NAME:
-					case MIDIEvents.EVENT_META_INSTRUMENT_NAME:
-					case MIDIEvents.EVENT_META_LYRICS:
-					case MIDIEvents.EVENT_META_MARKER:
-					case MIDIEvents.EVENT_META_CUE_POINT:
+					case EVENT_META_TEXT:
+					case EVENT_META_COPYRIGHT_NOTICE:
+					case EVENT_META_TRACK_NAME:
+					case EVENT_META_INSTRUMENT_NAME:
+					case EVENT_META_LYRICS:
+					case EVENT_META_MARKER:
+					case EVENT_META_CUE_POINT:
 						event.data = stream.readBytes(event.length);
 						return event;
-					case MIDIEvents.EVENT_META_MIDI_CHANNEL_PREFIX:
+					case EVENT_META_MIDI_CHANNEL_PREFIX:
 						if (strictMode && 1 !== event.length) {
 							throw new Error(stream.pos() + ' Bad metaevent length.');
 						}
 						event.prefix = stream.readUint8();
 						return event;
-					case MIDIEvents.EVENT_META_END_OF_TRACK:
+					case EVENT_META_END_OF_TRACK:
 						if (strictMode && 0 !== event.length) {
 							throw new Error(stream.pos() + ' Bad metaevent length.');
 						}
 						return event;
-					case MIDIEvents.EVENT_META_SET_TEMPO:
+					case EVENT_META_SET_TEMPO:
 						if (strictMode && 3 !== event.length) {
 							throw new Error(stream.pos() + ' Tempo meta event length must be 3.');
 						}
@@ -324,7 +161,7 @@ MIDIEvents.createParser = function midiEventsCreateParser(stream, startAt, stric
 							stream.readUint8());
 						event.tempoBPM = 60000000 / event.tempo;
 						return event;
-					case MIDIEvents.EVENT_META_SMTPE_OFFSET:
+					case EVENT_META_SMTPE_OFFSET:
 						if (strictMode && 5 !== event.length) {
 							throw new Error(stream.pos() + ' Bad metaevent length.');
 						}
@@ -354,7 +191,7 @@ MIDIEvents.createParser = function midiEventsCreateParser(stream, startAt, stric
 								' must be part of 0-99.');
 						}
 						return event;
-					case MIDIEvents.EVENT_META_KEY_SIGNATURE:
+					case EVENT_META_KEY_SIGNATURE:
 						if (strictMode && 2 !== event.length) {
 							throw new Error(stream.pos() + ' Bad metaevent length.');
 						}
@@ -368,7 +205,7 @@ MIDIEvents.createParser = function midiEventsCreateParser(stream, startAt, stric
 								' be 0 or 1.');
 						}
 						return event;
-					case MIDIEvents.EVENT_META_TIME_SIGNATURE:
+					case EVENT_META_TIME_SIGNATURE:
 						if (strictMode && 4 !== event.length) {
 							throw new Error(stream.pos() + ' Bad metaevent length.');
 						}
@@ -379,7 +216,7 @@ MIDIEvents.createParser = function midiEventsCreateParser(stream, startAt, stric
 						event.param4 = event.data[3];
             console.log('ts',event)
 						return event;
-					case MIDIEvents.EVENT_META_SEQUENCER_SPECIFIC:
+					case EVENT_META_SEQUENCER_SPECIFIC:
 						event.data = stream.readBytes(event.length);
 						return event;
 					default:
@@ -391,8 +228,8 @@ MIDIEvents.createParser = function midiEventsCreateParser(stream, startAt, stric
 						return event;
 					}
 					// System events
-				} else if (eventTypeByte === MIDIEvents.EVENT_SYSEX ||
-					eventTypeByte === MIDIEvents.EVENT_DIVSYSEX) {
+				} else if (eventTypeByte === EVENT_SYSEX ||
+					eventTypeByte === EVENT_DIVSYSEX) {
 					event.type = eventTypeByte;
 					event.length = stream.readVarInt();
 					event.data = stream.readBytes(event.length);
@@ -422,34 +259,34 @@ MIDIEvents.createParser = function midiEventsCreateParser(stream, startAt, stric
 					MIDIEventChannel = eventTypeByte & 0x0F;
 					MIDIEventParam1 = stream.readUint8();
 				}
-				event.type = MIDIEvents.EVENT_MIDI;
+				event.type = EVENT_MIDI;
 				event.subtype = MIDIEventType;
 				event.channel = MIDIEventChannel;
 				event.param1 = MIDIEventParam1;
 				switch (MIDIEventType) {
-				case MIDIEvents.EVENT_MIDI_NOTE_OFF:
+				case EVENT_MIDI_NOTE_OFF:
 					event.param2 = stream.readUint8();
 					return event;
-				case MIDIEvents.EVENT_MIDI_NOTE_ON:
+				case EVENT_MIDI_NOTE_ON:
 					event.param2 = stream.readUint8();
 
 					// If velocity is 0, it's a note off event in fact
 					if (!event.param2) {
-						event.subtype = MIDIEvents.EVENT_MIDI_NOTE_OFF;
+						event.subtype = EVENT_MIDI_NOTE_OFF;
 						event.param2 = 127; // Find a standard telling what to do here
 					}
 					return event;
-				case MIDIEvents.EVENT_MIDI_NOTE_AFTERTOUCH:
+				case EVENT_MIDI_NOTE_AFTERTOUCH:
 					event.param2 = stream.readUint8();
 					return event;
-				case MIDIEvents.EVENT_MIDI_CONTROLLER:
+				case EVENT_MIDI_CONTROLLER:
 					event.param2 = stream.readUint8();
 					return event;
-				case MIDIEvents.EVENT_MIDI_PROGRAM_CHANGE:
+				case EVENT_MIDI_PROGRAM_CHANGE:
 					return event;
-				case MIDIEvents.EVENT_MIDI_CHANNEL_AFTERTOUCH:
+				case EVENT_MIDI_CHANNEL_AFTERTOUCH:
 					return event;
-				case MIDIEvents.EVENT_MIDI_PITCH_BEND:
+				case EVENT_MIDI_PITCH_BEND:
 					event.param2 = stream.readUint8();
 					return event;
 				default:
@@ -469,7 +306,7 @@ MIDIEvents.createParser = function midiEventsCreateParser(stream, startAt, stric
 // MIDIFileHeader : Read and edit a MIDI header chunk in a given ArrayBuffer
 ///...........................................
 // MIDIFileHeader : Read and edit a MIDI header chunk in a given ArrayBuffer
-export class MIDIFileHeader {
+class MIDIFileHeader {
   // Static constants
   static HEADER_LENGTH = 14;
   static FRAMES_PER_SECONDS = 1;
@@ -574,7 +411,7 @@ export class MIDIFileHeader {
 // MIDIFileTrack : Read and edit a MIDI track chunk in a given ArrayBuffer
 ///...........................................
 // MIDIFileTrack : Read and edit a MIDI track chunk in a given ArrayBuffer
-export class MIDIFileTrack {
+class MIDIFileTrack {
   constructor(buffer, start) {
     let a;
     let trackLength;
@@ -775,7 +612,7 @@ export class MIDIFile {
       if (song.duration < events[i].playTime / 1000) {
         song.duration = events[i].playTime / 1000;
       }
-      if (events[i].subtype == MIDIEvents.EVENT_MIDI_NOTE_ON) {
+      if (events[i].subtype == EVENT_MIDI_NOTE_ON) {
         if (events[i].channel == 9) {
           if (events[i].param1 >= 35 && events[i].param1 <= 81) {
             this.startDrum(events[i], song);
@@ -791,13 +628,13 @@ export class MIDIFile {
           }
         }
       } else {
-        if (events[i].subtype == MIDIEvents.EVENT_MIDI_NOTE_OFF) {
+        if (events[i].subtype == EVENT_MIDI_NOTE_OFF) {
           if (events[i].channel != 9) {
             this.closeNote(events[i], song);
             //console.log('close', events[i].param1);
           }
         } else {
-          if (events[i].subtype == MIDIEvents.EVENT_MIDI_PROGRAM_CHANGE) {
+          if (events[i].subtype == EVENT_MIDI_PROGRAM_CHANGE) {
             if (events[i].channel != 9) {
               var track = this.takeTrack(events[i].channel, song);
               track.program = events[i].param1;
@@ -805,7 +642,7 @@ export class MIDIFile {
               console.log('skip program for drums');
             }
           } else {
-            if (events[i].subtype == MIDIEvents.EVENT_MIDI_CONTROLLER) {
+            if (events[i].subtype == EVENT_MIDI_CONTROLLER) {
               if (events[i].param1 == 7) {
                 if (events[i].channel != 9) {
                   var track = this.takeTrack(events[i].channel, song);
@@ -816,7 +653,7 @@ export class MIDIFile {
                 //console.log('controller', events[i]);
               }
             } else {
-              if (events[i].subtype == MIDIEvents.EVENT_MIDI_PITCH_BEND) {
+              if (events[i].subtype == EVENT_MIDI_PITCH_BEND) {
                 //console.log('	bend', events[i].channel, events[i].param1, events[i].param2);
                 this.addSlide(events[i], song);
               } else {
@@ -848,14 +685,14 @@ export class MIDIFile {
       for (i = 0, j = this.tracks.length; i < j; i++) {
         // reset playtime if format is 2
         playTime = (2 === format && playTime ? playTime : 0);
-        events = MIDIEvents.createParser(this.tracks[i].getTrackContent(), 0, false);
+        events = midiEventsCreateParser(this.tracks[i].getTrackContent(), 0, false);
         // loooping through events
         event = events.next();
         while (event) {
           playTime += event.delta ? (event.delta * tickResolution) / 1000 : 0;
-          if (event.type === MIDIEvents.EVENT_META) {
+          if (event.type === EVENT_META) {
             // tempo change events
-            if (event.subtype === MIDIEvents.EVENT_META_SET_TEMPO) {
+            if (event.subtype === EVENT_META_SET_TEMPO) {
               tickResolution = this.header.getTickResolution(event.tempo);
             }
           }
@@ -876,7 +713,7 @@ export class MIDIFile {
       // Creating parsers
       for (i = 0, j = this.tracks.length; i < j; i++) {
         trackParsers[i] = {};
-        trackParsers[i].parser = MIDIEvents.createParser(
+        trackParsers[i].parser = midiEventsCreateParser(
           this.tracks[i].getTrackContent(), 0, false);
         trackParsers[i].curEvent = trackParsers[i].parser.next();
       }
@@ -902,9 +739,9 @@ export class MIDIFile {
           // filling values
           event = trackParsers[smallestDelta].curEvent;
           playTime += (event.delta ? (event.delta * tickResolution) / 1000 : 0);
-          if (event.type === MIDIEvents.EVENT_META) {
+          if (event.type === EVENT_META) {
             // tempo change events
-            if (event.subtype === MIDIEvents.EVENT_META_SET_TEMPO) {
+            if (event.subtype === EVENT_META_SET_TEMPO) {
               tickResolution = this.header.getTickResolution(event.tempo);
             }
           }
@@ -923,10 +760,10 @@ export class MIDIFile {
     return filteredEvents;
   }
   getMidiEvents() {
-    return this.getEvents(MIDIEvents.EVENT_MIDI);
+    return this.getEvents(EVENT_MIDI);
   }
   getLyrics() {
-    var events = this.getEvents(MIDIEvents.EVENT_META);
+    var events = this.getEvents(EVENT_META);
     var texts = [];
     var lyrics = [];
     var event;
@@ -936,10 +773,10 @@ export class MIDIFile {
     for (i = 0, j = events.length; i < j; i++) {
       event = events[i];
       // Lyrics
-      if (event.subtype === MIDIEvents.EVENT_META_LYRICS) {
+      if (event.subtype === EVENT_META_LYRICS) {
         lyrics.push(event);
         // Texts
-      } else if (event.subtype === MIDIEvents.EVENT_META_TEXT) {
+      } else if (event.subtype === EVENT_META_TEXT) {
         // Ignore special texts
         if ('@' === String.fromCharCode(event.data[0])) {
           if ('T' === String.fromCharCode(event.data[1])) {
@@ -969,7 +806,7 @@ export class MIDIFile {
     // Convert texts and detect encoding
     try {
       texts.forEach(function (event) {
-        event.text = UTF8.getStringFromBytes(event.data, 0, event.length, true);
+        event.text = decodeUTF8(event.data, 0, event.length, true);
       });
     } catch (e) {
       texts.forEach(function (event) {
@@ -988,7 +825,7 @@ export class MIDIFile {
     if (index > this.tracks.length || 0 > index) {
       throw Error('Invalid track index (' + index + ')');
     }
-    parser = MIDIEvents.createParser(
+    parser = midiEventsCreateParser(
       this.tracks[index].getTrackContent(), 0, false);
     event = parser.next();
     do {
