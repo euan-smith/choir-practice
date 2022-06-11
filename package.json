@@ -8,7 +8,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "soundbank-pitch-shift": "^1.0.3",
+    "audio-loader": "^0.5.0",
+    "midi-file": "^1.2.3",
+    "sample-player": "^0.5.5",
     "vue": "^3.2.25"
   },
   "devDependencies": {

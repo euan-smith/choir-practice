@@ -25,3 +25,4 @@ dist-ssr
 *.mp3
 !src/assets/*.mp3
 public/*.json
+!public/manifest.json

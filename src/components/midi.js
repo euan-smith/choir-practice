@@ -377,6 +377,7 @@ MIDIEvents.createParser = function midiEventsCreateParser(stream, startAt, stric
 						event.param2 = event.data[1];
 						event.param3 = event.data[2];
 						event.param4 = event.data[3];
+            console.log('ts',event)
 						return event;
 					case MIDIEvents.EVENT_META_SEQUENCER_SPECIFIC:
 						event.data = stream.readBytes(event.length);
@@ -502,19 +503,9 @@ export class MIDIFileHeader {
     }
     return format;
   }
-  setFormat(format) {
-    if (0 !== format && 1 !== format && 2 !== format) {
-      throw new Error('Invalid MIDI format given (' + format + '),' +
-        ' format can be 0, 1 or 2 only.');
-    }
-    this.datas.setUint16(8, format);
-  }
   // Number of tracks
   getTracksCount() {
     return this.datas.getUint16(10);
-  }
-  setTracksCount(n) {
-    return this.datas.setUint16(10, n);
   }
   // Tick compute
   getTickResolution(tempo) {
@@ -542,9 +533,6 @@ export class MIDIFileHeader {
     }
     return divisionWord;
   }
-  setTicksPerBeat(ticksPerBeat) {
-    this.datas.setUint16(12, ticksPerBeat & 0x7FFF);
-  }
   // Frames per seconds
   getSMPTEFrames() {
     const divisionWord = this.datas.getUint16(12);
@@ -566,19 +554,6 @@ export class MIDIFileHeader {
       throw new Error('Time division is not expressed as frames per seconds.');
     }
     return divisionWord & 0x00FF;
-  }
-  setSMTPEDivision(smpteFrames, ticksPerFrame) {
-    if (29.97 === smpteFrames) {
-      smpteFrames = 29;
-    }
-    if (-1 === [24, 25, 29, 30].indexOf(smpteFrames)) {
-      throw new Error('Invalid SMPTE frames value given (' + smpteFrames + ').');
-    }
-    if (0 > ticksPerFrame || 0xFF < ticksPerFrame) {
-      throw new Error('Invalid ticks per frame value given (' + smpteFrames + ').');
-    }
-    this.datas.setUint8(12, 0x80 | smpteFrames);
-    this.datas.setUint8(13, ticksPerFrame);
   }
 }
 
@@ -645,47 +620,11 @@ export class MIDIFileTrack {
   getTrackLength() {
     return this.datas.getUint32(4);
   }
-  setTrackLength(trackLength) {
-    return this.datas.setUint32(4, trackLength);
-  }
   // Read track contents
   getTrackContent() {
     return new DataView(this.datas.buffer,
       this.datas.byteOffset + MIDIFileTrack.HDR_LENGTH,
       this.datas.byteLength - MIDIFileTrack.HDR_LENGTH);
-  }
-  // Set track content
-  setTrackContent(dataView) {
-    let origin;
-    let destination;
-    let i;
-    let j;
-    // Calculating the track length
-    const trackLength = dataView.byteLength - dataView.byteOffset;
-
-    // Track length must size at least like an  empty track (4bytes)
-    if (4 > trackLength) {
-      throw new Error('Invalid track length, must size at least 4bytes');
-    }
-    this.datas = new DataView(
-      new Uint8Array(MIDIFileTrack.HDR_LENGTH + trackLength).buffer);
-    // Adding the track header (MTrk)
-    this.datas.setUint8(0, 0x4D); // M
-    this.datas.setUint8(1, 0x54); // T
-    this.datas.setUint8(2, 0x72); // r
-    this.datas.setUint8(3, 0x6B); // k
-
-    // Adding the track size
-    this.datas.setUint32(4, trackLength);
-    // Copying the content
-    origin = new Uint8Array(dataView.buffer, dataView.byteOffset,
-      dataView.byteLength);
-    destination = new Uint8Array(this.datas.buffer,
-      MIDIFileTrack.HDR_LENGTH,
-      trackLength);
-    for (i = 0, j = origin.length; i < j; i++) {
-      destination[i] = origin[i];
-    }
   }
 }
 
@@ -1057,45 +996,6 @@ export class MIDIFile {
       event = parser.next();
     } while (event);
     return events;
-  }
-  // Basic events writting
-  setTrackEvents(index, events) {
-    var bufferLength;
-    var destination;
-
-    if (index > this.tracks.length || 0 > index) {
-      throw Error('Invalid track index (' + index + ')');
-    }
-    if ((!events) || (!events.length)) {
-      throw Error('A track must contain at least one event, none given.');
-    }
-    bufferLength = MIDIEvents.getRequiredBufferLength(events);
-    destination = new Uint8Array(bufferLength);
-    MIDIEvents.writeToTrack(events, destination);
-    this.tracks[index].setTrackContent(destination);
-  }
-  // Remove a track
-  deleteTrack(index) {
-    if (index > this.tracks.length || 0 > index) {
-      throw Error('Invalid track index (' + index + ')');
-    }
-    this.tracks.splice(index, 1);
-    this.header.setTracksCount(this.tracks.length);
-  }
-  // Add a track
-  addTrack(index) {
-    var track;
-
-    if (index > this.tracks.length || 0 > index) {
-      throw Error('Invalid track index (' + index + ')');
-    }
-    track = new MIDIFileTrack();
-    if (index === this.tracks.length) {
-      this.tracks.push(track);
-    } else {
-      this.tracks.splice(index, 0, track);
-    }
-    this.header.setTracksCount(this.tracks.length);
   }
   // Retrieve the content in a buffer
   getContent() {

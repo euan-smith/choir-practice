@@ -1,5 +1,4 @@
 import { MIDIFile } from './midi';
-import SoundFont from 'soundfont-player';
 import audioLoader from 'audio-loader';
 import samplePlayer from 'sample-player';
 export class PartSource{
@@ -210,14 +209,14 @@ const INSTRUMENTS = [
 export class MidiInstrument{
   static buffers=new Map();
   static players=new Map();
-  static async load(url){
+  static async load(ac,url){
     if (typeof url === "number"){
       if (url<10) url = `https://gleitz.github.io/midi-js-soundfonts/MusyngKite/${INSTRUMENTS[url]}-mp3.js`;
       else url = `https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/${INSTRUMENTS[url]}-mp3.js`;
     }
     let bufferPromise = this.buffers.get(url);
     if (!bufferPromise){
-      bufferPromise = audioLoader(url);
+      bufferPromise = audioLoader(ac,url);
       this.buffers.set(url,bufferPromise);
     }
     await bufferPromise;
@@ -275,8 +274,8 @@ export class MidiPartSource extends PartSource{
   async load(ac,cb){
     this.song = await MidiPartSource.get(this.file, this, cb);
     this.track = this.song.tracks[this.trackIndex];
-    this.inst = await MidiInstrument.load(this.track.program);
-    console.log(this.track);
+    this.inst = await MidiInstrument.load(ac,this.track.program);
+    // console.log(this.track);
   }
   start(ac, dest, when, from, until){
     if (this.started) return;
