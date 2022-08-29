@@ -152,16 +152,19 @@ export class MidiInstrument{
       this.buffers.set(url,bufferPromise);
     }
     await bufferPromise;
+    console.log(url);
     return url;
   }
   static async player(ac,url,dest){
-    const b = this.buffers.get(url)
-    if (!b) throw new Error('canot create a player without loading first');
+    const b = await this.buffers.get(url)
+    if (b === undefined) throw new Error('canot create a player without loading first');
+    let player;
     if (typeof b === "number"){
       player = new SynthPlayer(ac, b);
       player.connect(dest);
+      player.play = player.start;
     } else {
-      let player = this.players.get(url);
+      player = this.players.get(url);
       if (!player){
         player = samplePlayer(ac, b, {loop:true, gain:4.0});
         player.connect(dest);
@@ -169,7 +172,7 @@ export class MidiInstrument{
       }
     }   
 
-    // console.log(player);
+    console.log(url, player);
     return player;
   }
 }
@@ -204,15 +207,10 @@ class SynthPlayer{
     }
     this.dest = dest;
   }
-  play(...args){
-    this.start(...args)
-  }
   start(p, w){
     this.synth.noteOn(0,p,127,w)
     //returns a 
-    return {stop(w){
-      this.synth.noteOff(0,p,w);
-    }}
+    return {stop:(w)=>this.synth.noteOff(0,p,w)}
   }
   stop(){
     //stops ALL sounds
