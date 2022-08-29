@@ -1,5 +1,6 @@
 import audioLoader from 'audio-loader';
 import samplePlayer from 'sample-player';
+import WebAudioTinySynth from 'webaudio-tinysynth';
 
 const INSTRUMENTS = [
   "acoustic_grand_piano", //0
@@ -137,26 +138,85 @@ export class MidiInstrument{
   static players=new Map();
   static async load(ac,url){
     if (typeof url === "number"){
-      if (url<10) url = `https://gleitz.github.io/midi-js-soundfonts/MusyngKite/${INSTRUMENTS[url]}-mp3.js`;
-      else url = `https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/${INSTRUMENTS[url]}-mp3.js`;
+      if (url===0) url='./grand_piano.js';
+      // else if (url<10) url = `https://gleitz.github.io/midi-js-soundfonts/MusyngKite/${INSTRUMENTS[url]}-mp3.js`;
+      // else url = `https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/${INSTRUMENTS[url]}-mp3.js`;
     }
     let bufferPromise = this.buffers.get(url);
     if (!bufferPromise){
-      bufferPromise = audioLoader(ac,url);
+      if (typeof url === "number"){
+        bufferPromise = SynthPlayer.synthLoader(ac,url);
+      } else {
+        bufferPromise = audioLoader(ac,url);
+      }
       this.buffers.set(url,bufferPromise);
     }
     await bufferPromise;
     return url;
   }
   static async player(ac,url,dest){
-    let player = this.players.get(url);
-    if (!player){
-      if (!this.buffers.has(url)) throw new Error('canot create a player without loading first');
-      player = samplePlayer(ac,await this.buffers.get(url),{loop:true});
+    const b = this.buffers.get(url)
+    if (!b) throw new Error('canot create a player without loading first');
+    if (typeof b === "number"){
+      player = new SynthPlayer(ac, b);
       player.connect(dest);
-      this.players.set(url,player);
-    }
-    console.log(player);
+    } else {
+      let player = this.players.get(url);
+      if (!player){
+        player = samplePlayer(ac, b, {loop:true, gain:4.0});
+        player.connect(dest);
+        this.players.set(url,player);
+      }
+    }   
+
+    // console.log(player);
     return player;
   }
+}
+
+/**
+ * need an internal syth API which matches that of the player
+ * 
+ * - if the url is a number keep it as such - and just store a promise to the number
+ * - store a promise for forms sake - it is not synchronous
+ * 
+ * the synth player follows
+ */
+
+
+class SynthPlayer{
+  static synthMap = new WeakMap()
+  static async synthLoader(_ac, url){
+    return url;
+  }
+  constructor(ac,url){
+    this.ac = ac;
+    this.prog = url;
+  }
+
+  connect(dest){
+    this.synth = SynthPlayer.synthMap.get(dest);
+    if (!this.synth){
+      this.synth = new WebAudioTinySynth();
+      this.synth.setAudioContext(this.ac, dest);
+      this.synth.setProgram(0,this.prog);
+      SynthPlayer.synthMap.set(dest, this.synth);
+    }
+    this.dest = dest;
+  }
+  play(...args){
+    this.start(...args)
+  }
+  start(p, w){
+    this.synth.noteOn(0,p,127,w)
+    //returns a 
+    return {stop(w){
+      this.synth.noteOff(0,p,w);
+    }}
+  }
+  stop(){
+    //stops ALL sounds
+    this.synth.allSoundOff(0);
+  }
+
 }
