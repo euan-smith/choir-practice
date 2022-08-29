@@ -105,7 +105,10 @@ export class MidiPartSource extends PartSource{
   }
   constructor(url){
     super(url);
+    console.log(url,this.query);
     this.trackIndex = +this.query.track;
+    this.overrideProg = this.query.hasOwnProperty('prog');
+    this.program = +this.query.prog;
     this.stopping = false;
     this.started = false;
     this._loop = Promise.resolve();
@@ -113,7 +116,7 @@ export class MidiPartSource extends PartSource{
   async load(ac,cb){
     this.song = await MidiPartSource.get(this.file, this, cb);
     this.track = this.song.tracks[this.trackIndex];
-    this.inst = await MidiInstrument.load(ac,this.track.program);
+    this.inst = await MidiInstrument.load(ac,this.overrideProg ? this.program : this.track.program);
   }
   start(ac, dest, when, from, until){
     if (this.started) return;
