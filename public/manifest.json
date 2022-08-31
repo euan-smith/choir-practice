@@ -1,0 +1,25 @@
+{
+  "name":"Choir Practice",
+  "short_name":"Choir",
+  "start_url":"index.html",
+  "display":"standalone",
+  "theme_color":"#aaf",
+  "background_color":"#444",
+  "icons":[
+    {
+      "src":"logo96.png",
+      "sizes":"96x96",
+      "type":"image/png"
+    },
+    {
+      "src":"logo192.png",
+      "sizes":"192x192",
+      "type":"image/png"
+    },
+    {
+      "src":"logo512.png",
+      "sizes":"512x512",
+      "type":"image/png"
+    }
+  ]
+}

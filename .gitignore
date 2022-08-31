@@ -23,5 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 *.mp3
+*.mid
 !src/assets/*.mp3
 public/*.json
+public/*.js
+!public/manifest.json

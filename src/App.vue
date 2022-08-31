@@ -13,6 +13,10 @@
  * <list
  */
 import Mixer from './components/mixer.vue';
+// import { MIDIFile } from './components/midi';
+// import iterator from 'musicxml-iterator';
+// import WebMscore from 'webmscore';
+import {XMLParser} from 'fast-xml-parser';
 export default {
   components:{
     Mixer
@@ -75,12 +79,18 @@ export default {
     }
   },
   async mounted(){
+    // const r = await fetch('Chattanooga_Choo_Choo.musicxml');
+    // const b = await r.text();
+    // const score = new XMLParser().parse(b);
+    // console.log(score);
+    // return
     this.readScores();
     if (window.location.search){
       const q = window.location.search.slice(1).split('&').map(s=>s.split('=')).reduce((o,d)=>Object.assign(o,{[d[0]]:d[1]}),{});
       try{
         const data = await fetch('/'+q.score+'.json').then(r=>r.json());
         if (data.parts && data.bars){
+          // V1 of the file format
           this.title = data.title;
           this.scores = [{
             subtitle:'',
