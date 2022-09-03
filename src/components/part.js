@@ -3,11 +3,18 @@ import { MidiInstrument } from './instrument';
 
 export class PartSource{
   static fromUrl(url){
+    const SourceClass = this.getClass(url);
+    return new SourceClass(url);
+  }
+  static getClass(url){
     if (MidiPartSource.test(url)){
-      return new MidiPartSource(url);
+      return MidiPartSource;
     } else {
-      return new AudioPartSource(url);
-    }
+      return AudioPartSource;
+    } 
+  }
+  static canSetSpeed(url){
+    return this.getClass(url).canSetSpeed;
   }
   constructor(url){
     this.url=url;
@@ -52,6 +59,7 @@ export class PartSource{
 }
 
 export class AudioPartSource extends PartSource{
+  static canSetSpeed = false;
   constructor(url){
     super(url);
     this.buffer = null;
@@ -83,6 +91,7 @@ export class AudioPartSource extends PartSource{
 
 const MidiFiles = new Map();
 export class MidiPartSource extends PartSource{
+  static canSetSpeed = true;
   static test(url){
     return /\.mid\?/.test(url)
   }
@@ -118,11 +127,11 @@ export class MidiPartSource extends PartSource{
     this.track = this.song.tracks[this.trackIndex];
     this.inst = await MidiInstrument.load(ac,this.overrideProg ? this.program : this.track.program);
   }
-  start(ac, dest, when, from, until){
+  start(ac, dest, when, from, until, speed){
     if (this.started) return;
     this.stopping=false;
     when+=ac.currentTime;
-    this._loop = this.loop(ac,dest,when,from);
+    this._loop = this.loop(ac,dest,when,from,undefined,speed);
   }
   async loop(ac, dest, when, from, until){
     if (!this.instrument)this.instrument = await MidiInstrument.player(ac,this.inst,dest);

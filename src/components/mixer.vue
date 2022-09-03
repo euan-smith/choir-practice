@@ -63,7 +63,7 @@ export default {
       beat:null,
       beats:[],
       mainVol:1,
-      tempo:1,
+      speed:1,
       duration:10,
       newbar:null,
       lastNewbar:'',
@@ -86,6 +86,13 @@ export default {
     displayTime(){
       // return typeof this?.beat?.dTime === 'number' ? this.beat.dTime : this.currentTime;
       return this.beat?.sourceBeat ? this.beat.sourceBeat.time : this.currentTime;
+    },
+    canSetSpeed(){
+      if (!this.parts || !this.parts.length) return false
+      for(let part of this.parts)
+        if (!PartSource.canSetSpeed(part.url))
+          return false;
+      return true;
     }
   },
   methods:{
@@ -425,13 +432,13 @@ export default {
       </div>
     </div>
     <div class=controls>
-      <div class=title> {{title}} </div>
+      <div class=title> {{title}}{{canSetSpeed?'*':''}} </div>
       <label class=main>
         <div class=m-title>Main</div>
         <div class=m-ind>{{(mainVol*100).toFixed(0)}}</div>
         <volume class=slider thumb="red" min=0 max=1 step=0.001 value=1 @input="setMain" />
       </label>
-      <label class=tempo>
+      <label class=met-vol>
         <div class="m-title"> Tick </div>
         <div class=m-ind>{{(metronome.vol*100).toFixed(0)}}</div>
         <volume class=slider thumb="blue" min=0 max=1 step=0.001 value=1 @input="setMetVol" disabled />
@@ -446,7 +453,7 @@ export default {
       
       <div class=beat-title>Beat</div>
       <div class=beat-background />
-      <div class=beat v-if=beat>{{beat.beat}}</div>
+      <div class=beat v-if=beat><div class="bt" :class="{on:beat.beat>=ind}" v-for="ind of beat.timeSig" :key="ind"/></div>
       <div class=time-title>Time</div>
       <div class=time-background />
       <div class=time>{{displayTime.toFixed(2)}}</div>
@@ -614,16 +621,27 @@ export default {
     font-size: 20px;
   }
   .controls>.beat-background{
-    grid-area:3/-3/6/-1;
+    grid-area:3/-3/4/-1;
     border: #333 10px solid;
     border-radius:20px;
     background:#272222;
   }
   .controls>.beat{
-    grid-area:3/-3/6/-1;
+    grid-area:3/-3/4/-1;
     color:#faa;
-    font-size: 130px;
-    padding-top:24px;
+    font-size: 55px;
+    padding:20px 15px;
+    display:flex;
+    flex-direction: row;
+  }
+  .beat>.bt{
+    background:#322;
+    flex:1 1 0px;
+    height: calc(100% - 10px);
+    margin: 5px;
+  }
+  .bt.on{
+    background:radial-gradient(circle, #a44 0%, #933 60%, #733 90%, #622 100%);
   }
   .controls>.time-title{
     grid-area:4/3/5/-3;
@@ -642,31 +660,31 @@ export default {
     padding-top:8px;
     color:#aaf;
   }
-  .controls>.tempo{
+  .controls>.met-vol{
     grid-area:2/2/9/3;
   }
   .controls>.main{
     grid-area:2/1/9/2;
   }
-  .controls>.main, .controls>.tempo{
+  .controls>.main, .controls>.met-vol{
     position:relative;
     display:flex;
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
   }
-  .main>.m-title, .tempo>.m-title{
+  .main>.m-title, .met-vol>.m-title{
     flex: 0 0 1em;
     margin-bottom:0.2em;
   }
-  .main>.m-ind, .tempo>.m-ind{
+  .main>.m-ind, .met-vol>.m-ind{
     flex: 0 0 1em;
     width:42px;
     background:#272727;
     border-radius:5px;
     margin: 0.2em 0;
   }
-  .main>.slider, .tempo>.slider{
+  .main>.slider, .met-vol>.slider{
     flex: 1 1 0;
     position:relative;
     max-width:40px;
@@ -908,19 +926,19 @@ input.time:focus::-ms-fill-upper {
   }
   .controls>.beat{
     font-size: 110px;
-    padding-top:33px;
+    padding:15px;
   }
   .controls>.time{
     font-size: 48px;
     padding-top:12px;
   }
-  .main, .tempo{
+  .main, .met-vol{
     font-size:14px;
   }
-  .main>.m-ind, .tempo>.m-ind{
+  .main>.m-ind, .met-vol>.m-ind{
     display:none;
   }
-  .main>.slider, .tempo>.slider{
+  .main>.slider, .met-vol>.slider{
     max-width:34px;
     width:80%;
     margin: 0.3em 0 0.5em;
@@ -966,8 +984,12 @@ input.time:focus::-ms-fill-upper {
   .controls>.beat-title{
     grid-area:2/-3/3/-1;
   }
-  .controls>.beat-background, .controls>.beat{
+  .controls>.beat-background{
     padding:0;
+    grid-area: 3/-3/6/-1;
+  }
+  .controls>.beat{
+    padding:20px;
     grid-area: 3/-3/6/-1;
   }
   .controls>.time-title{
@@ -981,7 +1003,7 @@ input.time:focus::-ms-fill-upper {
   .controls>.main{
     grid-area: 6/1/7/-1;
   }
-  .controls>.tempo{
+  .controls>.met-vol{
     grid-area: 7/1/8/-1;
   }
   .controls>.play{
@@ -993,16 +1015,16 @@ input.time:focus::-ms-fill-upper {
   .controls>.met{
     grid-area: 8/1/9/2;
   }
-  .controls>.main, .controls>.tempo{
+  .controls>.main, .controls>.met-vol{
     flex-direction: row;
   }
-  .main>.m-title, .tempo>.m-title{
+  .main>.m-title, .met-vol>.m-title{
     flex: 0 0 50px;
   }
-  .main>.m-ind, .tempo>.m-ind{
+  .main>.m-ind, .met-vol>.m-ind{
     display:none;
   }
-  .main>.slider, .tempo>.slider{
+  .main>.slider, .met-vol>.slider{
     flex: 1 1 0;
     position:relative;
     max-height:40px;
