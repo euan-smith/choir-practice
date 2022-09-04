@@ -3,7 +3,8 @@
 import Volume from "./volume.vue";
 import stick4cs from "../assets/stick-4cs.mp3";
 import stick4d from "../assets/stick-4d.mp3";
-import {PartSource} from "./part"
+import {PartSource} from "./part";
+const tickLeadTime = 0.053;
 export default {
   components:{
     Volume
@@ -33,6 +34,7 @@ export default {
   watch:{
     parts(){
       this.load();
+      if (!this.canSetSpeed) this.speed=1;
     },
     bars(){
       this.parseBars();
@@ -63,9 +65,10 @@ export default {
       beat:null,
       beats:[],
       mainVol:1,
-      tempo:1,
+      speed:1,
       duration:10,
       newbar:null,
+      newspeed:null,
       lastNewbar:'',
       decoded:[],
       duraction:0,
@@ -86,6 +89,13 @@ export default {
     displayTime(){
       // return typeof this?.beat?.dTime === 'number' ? this.beat.dTime : this.currentTime;
       return this.beat?.sourceBeat ? this.beat.sourceBeat.time : this.currentTime;
+    },
+    canSetSpeed(){
+      if (!this.parts || !this.parts.length) return false
+      for(let part of this.parts)
+        if (!PartSource.canSetSpeed(part.url))
+          return false;
+      return true;
     }
   },
   methods:{
@@ -218,17 +228,17 @@ export default {
       if (!this.ac) this.setupAudio();
       const {ac,tracks} = this;
       for (let track of tracks){
-        track.partSource.start(ac,track.anal,0,this.currentTime,this.duration);
+        track.partSource.start(ac,track.anal,0,this.currentTime,this.duration,this.speed);
       }
-      const time = this.beat.time-this.currentTime+0.053;
-      if (time>=0){
+      const time = this.beat.time-this.currentTime;
+      if (time/this.speed>=-tickLeadTime){
           const tickIdx = this.beat.bar === 1 ? 1 : 0;
           const {metronome} = this;
           metronome.source = new AudioBufferSourceNode(ac, {buffer:this.sticks[tickIdx]});
           metronome.source.connect(metronome.gainNode);
-          metronome.source.start(ac.currentTime+time,0);
+          metronome.source.start(ac.currentTime+time/this.speed+tickLeadTime,0);
       }
-      this.playProm = this.playLoop();
+      this.playProm = this.playLoop(this.speed);
     },
     async prePlay(){
       if (this.playing) return
@@ -239,34 +249,34 @@ export default {
       const period = 60/this.beat.tempo;
       let beat = this.beat;
       for (let n=beatCount; n>=1;){
-        beat = {time:beat.time-period, tickOn:true, next:beat, beat:n--, sourceBeat: this.beat}
+        beat = {time:beat.time-period, tickOn:true, next:beat, beat:n--, sourceBeat: this.beat, timeSig:this.beat.timeSig}
       }
       const start = this.currentTime - beat.time;
       this.beat = beat;
       this.setVols();
       const {ac,tracks} = this;
       for (let track of tracks){
-        track.partSource.start(ac,track.anal,start,this.currentTime);
+        track.partSource.start(ac,track.anal,start/this.speed,this.currentTime, null, this.speed);
       }
       this.currentTime-=start;
-      const time = this.beat.time-this.currentTime+0.053;
-      if (time>=0){
+      const time = this.beat.time-this.currentTime;
+      if (time/this.speed>=-tickLeadTime){
           const tickIdx = this.beat.bar > 1 ? 0 : 1;
           const {metronome} = this;
           metronome.source = new AudioBufferSourceNode(ac, {buffer:this.sticks[tickIdx]});
           metronome.source.connect(metronome.gainNode);
-          metronome.source.start(ac.currentTime+time,0);
+          metronome.source.start(ac.currentTime+time/this.speed+tickLeadTime,0);
       }
-      this.playProm = this.playLoop();
+      this.playProm = this.playLoop(this.speed);
     },
-    async playLoop(){
+    async playLoop(speed){
       const {ac,tracks,metronome} = this;
-      this.offset = this.currentTime - ac.currentTime
+      this.offset = this.currentTime - ac.currentTime*speed
       this.playing=true;
       tracks[0].partSource.onended=()=>this.playing=false;
       let binCount = null, data = null, ctxs=[];
       while (this.playing){
-        this.currentTime = Math.min(ac.currentTime + this.offset, this.duration);
+        this.currentTime = Math.min(ac.currentTime*speed + this.offset, this.duration);
         this.$refs.time.value = this.displayTime / this.duration;
         const oldBeat = this.beat;
         if (this.beat.time>this.currentTime+0.0001) this.beat = this.firstBeat;
@@ -279,11 +289,11 @@ export default {
           metronome.source.disconnect();
           metronome.source.stop();
           }
-          const time = this.beat.time-this.currentTime+0.05;
+          const time = this.beat.time-this.currentTime;
           const tickIdx = this.beat.beat > 1 ? 0 : 1;
           metronome.source = new AudioBufferSourceNode(ac, {buffer:this.sticks[tickIdx]});
           metronome.source.connect(metronome.gainNode);
-          metronome.source.start(ac.currentTime+time,0);
+          metronome.source.start(ac.currentTime+time/speed+tickLeadTime,0);
         }
         for (let [i,track] of tracks.entries()){
           if (!data){
@@ -331,6 +341,21 @@ export default {
     prev(){
       this.pause();
       this.$emit('prev');
+    },
+    editSpeed(){
+      if (!this.canSetSpeed) return;
+      this.pause();
+      this.lastNewspeed = this.newspeed='';
+      setTimeout(()=>{
+        this.$refs.newspeed.focus();
+      },50);
+    },
+    editSpeedDone(){
+      this.speed = this.newspeed/100;
+      this.newspeed=null;
+    },
+    editSpeedQuit(){
+      this.newspeed=null;
     },
     editBar(){
       this.pause();
@@ -431,7 +456,7 @@ export default {
         <div class=m-ind>{{(mainVol*100).toFixed(0)}}</div>
         <volume class=slider thumb="red" min=0 max=1 step=0.001 value=1 @input="setMain" />
       </label>
-      <label class=tempo>
+      <label class=met-vol>
         <div class="m-title"> Tick </div>
         <div class=m-ind>{{(metronome.vol*100).toFixed(0)}}</div>
         <volume class=slider thumb="blue" min=0 max=1 step=0.001 value=1 @input="setMetVol" disabled />
@@ -446,10 +471,16 @@ export default {
       
       <div class=beat-title>Beat</div>
       <div class=beat-background />
-      <div class=beat v-if=beat>{{beat.beat}}</div>
+      <div class=beat v-if=beat><div class="bt" :class="{on:beat.beat>=ind}" v-for="ind of beat.timeSig" :key="ind"/></div>
       <div class=time-title>Time</div>
       <div class=time-background />
       <div class=time>{{displayTime.toFixed(2)}}</div>
+      <div class=speed-title>Speed</div>
+      <div class=speed-background />
+      <div v-if="newspeed===null" class=speed @click="editSpeed">{{(speed*100).toFixed(0)}}</div>
+      <template v-else>
+        <input type="text" ref="newspeed" v-model="newspeed" class=speed @blur="editSpeedDone" @keyup.enter="editSpeedDone" @keyup.escape="editSpeedQuit">
+      </template>
       <div class=play><span v-if=playing @click="pause" class="material-icons">pause</span><span v-else @click="play" class="material-icons">play_arrow</span></div>
       <svg class=pre-play viewBox="-2 -2 28 28" @click="prePlay">
       <path :fill="playing?'#555':'#eee'" d="m 8.9838564,1.5166215 v 2 h 5.9999996 v -2 z m 2.9999996,3 c -4.9699996,0 -8.9999996,4.0299999 -8.9999996,8.9999995 0,4.97 4.02,9 8.9999996,9 4.98,0 9,-4.03 9,-9 0,-2.12 -0.740703,-4.0693745 -1.970703,-5.6093745 l 1.419922,-1.421875 c -0.43,-0.51 -0.900156,-0.9882031 -1.410156,-1.4082031 l -1.419922,1.4199219 c -1.55,-1.24 -3.499141,-1.9804688 -5.619141,-1.9804688 z m -1.789062,4.7480469 6,4.4999996 -6,4.5 z" />
@@ -614,16 +645,27 @@ export default {
     font-size: 20px;
   }
   .controls>.beat-background{
-    grid-area:3/-3/6/-1;
+    grid-area:3/-3/4/-1;
     border: #333 10px solid;
     border-radius:20px;
     background:#272222;
   }
   .controls>.beat{
-    grid-area:3/-3/6/-1;
+    grid-area:3/-3/4/-1;
     color:#faa;
-    font-size: 130px;
-    padding-top:24px;
+    font-size: 55px;
+    padding:20px 15px;
+    display:flex;
+    flex-direction: row;
+  }
+  .beat>.bt{
+    background:#322;
+    flex:1 1 0px;
+    height: calc(100% - 10px);
+    margin: 5px;
+  }
+  .bt.on{
+    background:radial-gradient(circle, #a44 0%, #933 60%, #733 90%, #622 100%);
   }
   .controls>.time-title{
     grid-area:4/3/5/-3;
@@ -642,31 +684,59 @@ export default {
     padding-top:8px;
     color:#aaf;
   }
-  .controls>.tempo{
+  .controls>.speed-title{
+    grid-area:4/-3/5/-1;
+    font-size: 20px;
+  }
+  .controls>.speed-background{
+    grid-area:5/-3/6/-1;
+    border: #333 10px solid;
+    border-radius:20px;
+    font-size: 55px;
+    background:#272722;
+  }
+  .controls>.speed{
+    position:relative;
+    grid-area:5/-3/6/-1;
+    font-size: 55px;
+    padding-top:8px;
+    color:#ffa;
+  }
+  .controls>input.speed{
+    font-family: Lato;
+    background:#0000;
+    border:none;
+    padding-top:0px;
+    margin-top:-8px;
+  }
+  input.speed:focus{
+    outline:none;
+  }
+  .controls>.met-vol{
     grid-area:2/2/9/3;
   }
   .controls>.main{
     grid-area:2/1/9/2;
   }
-  .controls>.main, .controls>.tempo{
+  .controls>.main, .controls>.met-vol{
     position:relative;
     display:flex;
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
   }
-  .main>.m-title, .tempo>.m-title{
+  .main>.m-title, .met-vol>.m-title{
     flex: 0 0 1em;
     margin-bottom:0.2em;
   }
-  .main>.m-ind, .tempo>.m-ind{
+  .main>.m-ind, .met-vol>.m-ind{
     flex: 0 0 1em;
     width:42px;
     background:#272727;
     border-radius:5px;
     margin: 0.2em 0;
   }
-  .main>.slider, .tempo>.slider{
+  .main>.slider, .met-vol>.slider{
     flex: 1 1 0;
     position:relative;
     max-width:40px;
@@ -908,19 +978,19 @@ input.time:focus::-ms-fill-upper {
   }
   .controls>.beat{
     font-size: 110px;
-    padding-top:33px;
+    padding:15px;
   }
   .controls>.time{
     font-size: 48px;
     padding-top:12px;
   }
-  .main, .tempo{
+  .main, .met-vol{
     font-size:14px;
   }
-  .main>.m-ind, .tempo>.m-ind{
+  .main>.m-ind, .met-vol>.m-ind{
     display:none;
   }
-  .main>.slider, .tempo>.slider{
+  .main>.slider, .met-vol>.slider{
     max-width:34px;
     width:80%;
     margin: 0.3em 0 0.5em;
@@ -966,8 +1036,12 @@ input.time:focus::-ms-fill-upper {
   .controls>.beat-title{
     grid-area:2/-3/3/-1;
   }
-  .controls>.beat-background, .controls>.beat{
+  .controls>.beat-background{
     padding:0;
+    grid-area: 3/-3/6/-1;
+  }
+  .controls>.beat{
+    padding:20px;
     grid-area: 3/-3/6/-1;
   }
   .controls>.time-title{
@@ -981,7 +1055,7 @@ input.time:focus::-ms-fill-upper {
   .controls>.main{
     grid-area: 6/1/7/-1;
   }
-  .controls>.tempo{
+  .controls>.met-vol{
     grid-area: 7/1/8/-1;
   }
   .controls>.play{
@@ -993,16 +1067,16 @@ input.time:focus::-ms-fill-upper {
   .controls>.met{
     grid-area: 8/1/9/2;
   }
-  .controls>.main, .controls>.tempo{
+  .controls>.main, .controls>.met-vol{
     flex-direction: row;
   }
-  .main>.m-title, .tempo>.m-title{
+  .main>.m-title, .met-vol>.m-title{
     flex: 0 0 50px;
   }
-  .main>.m-ind, .tempo>.m-ind{
+  .main>.m-ind, .met-vol>.m-ind{
     display:none;
   }
-  .main>.slider, .tempo>.slider{
+  .main>.slider, .met-vol>.slider{
     flex: 1 1 0;
     position:relative;
     max-height:40px;

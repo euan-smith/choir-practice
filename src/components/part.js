@@ -3,11 +3,18 @@ import { MidiInstrument } from './instrument';
 
 export class PartSource{
   static fromUrl(url){
+    const SourceClass = this.getClass(url);
+    return new SourceClass(url);
+  }
+  static getClass(url){
     if (MidiPartSource.test(url)){
-      return new MidiPartSource(url);
+      return MidiPartSource;
     } else {
-      return new AudioPartSource(url);
-    }
+      return AudioPartSource;
+    } 
+  }
+  static canSetSpeed(url){
+    return this.getClass(url).canSetSpeed;
   }
   constructor(url){
     this.url=url;
@@ -52,6 +59,7 @@ export class PartSource{
 }
 
 export class AudioPartSource extends PartSource{
+  static canSetSpeed = false;
   constructor(url){
     super(url);
     this.buffer = null;
@@ -83,6 +91,7 @@ export class AudioPartSource extends PartSource{
 
 const MidiFiles = new Map();
 export class MidiPartSource extends PartSource{
+  static canSetSpeed = true;
   static test(url){
     return /\.mid\?/.test(url)
   }
@@ -118,18 +127,18 @@ export class MidiPartSource extends PartSource{
     this.track = this.song.tracks[this.trackIndex];
     this.inst = await MidiInstrument.load(ac,this.overrideProg ? this.program : this.track.program);
   }
-  start(ac, dest, when, from, until){
+  start(ac, dest, when, from, until, speed){
     if (this.started) return;
     this.stopping=false;
     when+=ac.currentTime;
-    this._loop = this.loop(ac,dest,when,from);
+    this._loop = this.loop(ac,dest,when,from,undefined,speed);
   }
-  async loop(ac, dest, when, from, until){
+  async loop(ac, dest, when, from, until,speed){
     if (!this.instrument)this.instrument = await MidiInstrument.player(ac,this.inst,dest);
     if (!until) until = this.song.duration;
     console.log(until);
     this.started = true;
-    const offset = when - from;
+    const offset = when*speed - from;
     let noteIdx = 0;
     const {notes} = this.track;
     while (noteIdx<notes.length && (notes[noteIdx].when+notes[noteIdx].duration)<from) noteIdx++;
@@ -142,7 +151,7 @@ export class MidiPartSource extends PartSource{
       }
     }
     while(!this.stopping){
-      const now = ac.currentTime - offset;
+      const now = ac.currentTime*speed - offset;
       if (now >= until) break;
       if (noteIdx<notes.length){
         while (noteIdx<notes.length && notes[noteIdx].when<now + 0.5) {
@@ -151,7 +160,7 @@ export class MidiPartSource extends PartSource{
             duration -= now-when;
             when = now;
           }
-          play(pitch, when+offset, duration);
+          play(pitch, (when+offset)/speed, duration/speed);
           noteIdx++;
         }
       }
