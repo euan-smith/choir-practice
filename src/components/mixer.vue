@@ -249,7 +249,7 @@ export default {
       const period = 60/this.beat.tempo;
       let beat = this.beat;
       for (let n=beatCount; n>=1;){
-        beat = {time:beat.time-period, tickOn:true, next:beat, beat:n--, sourceBeat: this.beat}
+        beat = {time:beat.time-period, tickOn:true, next:beat, beat:n--, sourceBeat: this.beat, timeSig:this.beat.timeSig}
       }
       const start = this.currentTime - beat.time;
       this.beat = beat;
