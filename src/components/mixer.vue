@@ -33,6 +33,7 @@ export default {
   watch:{
     parts(){
       this.load();
+      if (!this.canSetSpeed) this.speed=1;
     },
     bars(){
       this.parseBars();
@@ -66,6 +67,7 @@ export default {
       speed:1,
       duration:10,
       newbar:null,
+      newspeed:null,
       lastNewbar:'',
       decoded:[],
       duraction:0,
@@ -339,6 +341,21 @@ export default {
       this.pause();
       this.$emit('prev');
     },
+    editSpeed(){
+      if (!this.canSetSpeed) return;
+      this.pause();
+      this.lastNewspeed = this.newspeed='';
+      setTimeout(()=>{
+        this.$refs.newspeed.focus();
+      },50);
+    },
+    editSpeedDone(){
+      this.speed = this.newspeed/100;
+      this.newspeed=null;
+    },
+    editSpeedQuit(){
+      this.newspeed=null;
+    },
     editBar(){
       this.pause();
       this.lastNewbar = this.newbar='';
@@ -457,6 +474,12 @@ export default {
       <div class=time-title>Time</div>
       <div class=time-background />
       <div class=time>{{displayTime.toFixed(2)}}</div>
+      <div class=speed-title>Speed</div>
+      <div class=speed-background />
+      <div v-if="newspeed===null" class=speed @click="editSpeed">{{(speed*100).toFixed(0)}}</div>
+      <template v-else>
+        <input type="text" ref="newspeed" v-model="newspeed" class=speed @blur="editSpeedDone" @keyup.enter="editSpeedDone" @keyup.escape="editSpeedQuit">
+      </template>
       <div class=play><span v-if=playing @click="pause" class="material-icons">pause</span><span v-else @click="play" class="material-icons">play_arrow</span></div>
       <svg class=pre-play viewBox="-2 -2 28 28" @click="prePlay">
       <path :fill="playing?'#555':'#eee'" d="m 8.9838564,1.5166215 v 2 h 5.9999996 v -2 z m 2.9999996,3 c -4.9699996,0 -8.9999996,4.0299999 -8.9999996,8.9999995 0,4.97 4.02,9 8.9999996,9 4.98,0 9,-4.03 9,-9 0,-2.12 -0.740703,-4.0693745 -1.970703,-5.6093745 l 1.419922,-1.421875 c -0.43,-0.51 -0.900156,-0.9882031 -1.410156,-1.4082031 l -1.419922,1.4199219 c -1.55,-1.24 -3.499141,-1.9804688 -5.619141,-1.9804688 z m -1.789062,4.7480469 6,4.4999996 -6,4.5 z" />
@@ -659,6 +682,34 @@ export default {
     font-size: 55px;
     padding-top:8px;
     color:#aaf;
+  }
+  .controls>.speed-title{
+    grid-area:4/-3/5/-1;
+    font-size: 20px;
+  }
+  .controls>.speed-background{
+    grid-area:5/-3/6/-1;
+    border: #333 10px solid;
+    border-radius:20px;
+    font-size: 55px;
+    background:#272722;
+  }
+  .controls>.speed{
+    position:relative;
+    grid-area:5/-3/6/-1;
+    font-size: 55px;
+    padding-top:8px;
+    color:#ffa;
+  }
+  .controls>input.speed{
+    font-family: Lato;
+    background:#0000;
+    border:none;
+    padding-top:0px;
+    margin-top:-8px;
+  }
+  input.speed:focus{
+    outline:none;
   }
   .controls>.met-vol{
     grid-area:2/2/9/3;
