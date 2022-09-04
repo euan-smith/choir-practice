@@ -3,7 +3,8 @@
 import Volume from "./volume.vue";
 import stick4cs from "../assets/stick-4cs.mp3";
 import stick4d from "../assets/stick-4d.mp3";
-import {PartSource} from "./part"
+import {PartSource} from "./part";
+const tickLeadTime = 0.053;
 export default {
   components:{
     Volume
@@ -227,17 +228,17 @@ export default {
       if (!this.ac) this.setupAudio();
       const {ac,tracks} = this;
       for (let track of tracks){
-        track.partSource.start(ac,track.anal,0,this.currentTime,this.duration);
+        track.partSource.start(ac,track.anal,0,this.currentTime,this.duration,this.speed);
       }
-      const time = this.beat.time-this.currentTime+0.053;
-      if (time>=0){
+      const time = this.beat.time-this.currentTime;
+      if (time/this.speed>=-tickLeadTime){
           const tickIdx = this.beat.bar === 1 ? 1 : 0;
           const {metronome} = this;
           metronome.source = new AudioBufferSourceNode(ac, {buffer:this.sticks[tickIdx]});
           metronome.source.connect(metronome.gainNode);
-          metronome.source.start(ac.currentTime+time,0);
+          metronome.source.start(ac.currentTime+time/this.speed+tickLeadTime,0);
       }
-      this.playProm = this.playLoop();
+      this.playProm = this.playLoop(this.speed);
     },
     async prePlay(){
       if (this.playing) return
@@ -255,27 +256,27 @@ export default {
       this.setVols();
       const {ac,tracks} = this;
       for (let track of tracks){
-        track.partSource.start(ac,track.anal,start,this.currentTime);
+        track.partSource.start(ac,track.anal,start/this.speed,this.currentTime, null, this.speed);
       }
       this.currentTime-=start;
-      const time = this.beat.time-this.currentTime+0.053;
-      if (time>=0){
+      const time = this.beat.time-this.currentTime;
+      if (time/this.speed>=-tickLeadTime){
           const tickIdx = this.beat.bar > 1 ? 0 : 1;
           const {metronome} = this;
           metronome.source = new AudioBufferSourceNode(ac, {buffer:this.sticks[tickIdx]});
           metronome.source.connect(metronome.gainNode);
-          metronome.source.start(ac.currentTime+time,0);
+          metronome.source.start(ac.currentTime+time/this.speed+tickLeadTime,0);
       }
-      this.playProm = this.playLoop();
+      this.playProm = this.playLoop(this.speed);
     },
-    async playLoop(){
+    async playLoop(speed){
       const {ac,tracks,metronome} = this;
-      this.offset = this.currentTime - ac.currentTime
+      this.offset = this.currentTime - ac.currentTime*speed
       this.playing=true;
       tracks[0].partSource.onended=()=>this.playing=false;
       let binCount = null, data = null, ctxs=[];
       while (this.playing){
-        this.currentTime = Math.min(ac.currentTime + this.offset, this.duration);
+        this.currentTime = Math.min(ac.currentTime*speed + this.offset, this.duration);
         this.$refs.time.value = this.displayTime / this.duration;
         const oldBeat = this.beat;
         if (this.beat.time>this.currentTime+0.0001) this.beat = this.firstBeat;
@@ -288,11 +289,11 @@ export default {
           metronome.source.disconnect();
           metronome.source.stop();
           }
-          const time = this.beat.time-this.currentTime+0.05;
+          const time = this.beat.time-this.currentTime;
           const tickIdx = this.beat.beat > 1 ? 0 : 1;
           metronome.source = new AudioBufferSourceNode(ac, {buffer:this.sticks[tickIdx]});
           metronome.source.connect(metronome.gainNode);
-          metronome.source.start(ac.currentTime+time,0);
+          metronome.source.start(ac.currentTime+time/speed+tickLeadTime,0);
         }
         for (let [i,track] of tracks.entries()){
           if (!data){
@@ -449,7 +450,7 @@ export default {
       </div>
     </div>
     <div class=controls>
-      <div class=title> {{title}}{{canSetSpeed?'*':''}} </div>
+      <div class=title> {{title}} </div>
       <label class=main>
         <div class=m-title>Main</div>
         <div class=m-ind>{{(mainVol*100).toFixed(0)}}</div>

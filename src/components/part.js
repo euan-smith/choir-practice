@@ -133,12 +133,12 @@ export class MidiPartSource extends PartSource{
     when+=ac.currentTime;
     this._loop = this.loop(ac,dest,when,from,undefined,speed);
   }
-  async loop(ac, dest, when, from, until){
+  async loop(ac, dest, when, from, until,speed){
     if (!this.instrument)this.instrument = await MidiInstrument.player(ac,this.inst,dest);
     if (!until) until = this.song.duration;
     console.log(until);
     this.started = true;
-    const offset = when - from;
+    const offset = when*speed - from;
     let noteIdx = 0;
     const {notes} = this.track;
     while (noteIdx<notes.length && (notes[noteIdx].when+notes[noteIdx].duration)<from) noteIdx++;
@@ -151,7 +151,7 @@ export class MidiPartSource extends PartSource{
       }
     }
     while(!this.stopping){
-      const now = ac.currentTime - offset;
+      const now = ac.currentTime*speed - offset;
       if (now >= until) break;
       if (noteIdx<notes.length){
         while (noteIdx<notes.length && notes[noteIdx].when<now + 0.5) {
@@ -160,7 +160,7 @@ export class MidiPartSource extends PartSource{
             duration -= now-when;
             when = now;
           }
-          play(pitch, when+offset, duration);
+          play(pitch, (when+offset)/speed, duration/speed);
           noteIdx++;
         }
       }
