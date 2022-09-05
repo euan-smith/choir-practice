@@ -481,7 +481,7 @@ export default {
       <template v-else>
         <input type="text" ref="newspeed" v-model="newspeed" class=speed @blur="editSpeedDone" @keyup.enter="editSpeedDone" @keyup.escape="editSpeedQuit">
       </template>
-      <div class=play><span v-if=playing @click="pause" class="material-icons">pause</span><span v-else @click="play" class="material-icons">play_arrow</span></div>
+      <div class=play><svg class="icon" viewBox="0 0 48 48" @click="playing?pause():play()" ><path v-if=playing d="M27.4 35.4V12.6h8v22.8Zm-14.8 0V12.6h8.05v22.8Z"/><path v-else d="M16 37.85v-28l22 14Z"/></svg></div>
       <svg class=pre-play viewBox="-2 -2 28 28" @click="prePlay">
       <path :fill="playing?'#555':'#eee'" d="m 8.9838564,1.5166215 v 2 h 5.9999996 v -2 z m 2.9999996,3 c -4.9699996,0 -8.9999996,4.0299999 -8.9999996,8.9999995 0,4.97 4.02,9 8.9999996,9 4.98,0 9,-4.03 9,-9 0,-2.12 -0.740703,-4.0693745 -1.970703,-5.6093745 l 1.419922,-1.421875 c -0.43,-0.51 -0.900156,-0.9882031 -1.410156,-1.4082031 l -1.419922,1.4199219 c -1.55,-1.24 -3.499141,-1.9804688 -5.619141,-1.9804688 z m -1.789062,4.7480469 6,4.4999996 -6,4.5 z" />
       </svg>
@@ -491,8 +491,8 @@ export default {
       <label class=timeline>
         <input class=time ref=time type=range min=0 max=1 step=0.001 value=0 @input="setTime">
       </label>
-      <div v-if="showNext" class="next material-icons" @click="next">skip_next</div>
-      <div v-if="showPrev" class="prev material-icons" @click="prev">skip_previous</div>
+      <svg v-if="showNext" class="next icon" viewBox="0 0 48 48" @click="next"><path d="M34 36V12h3v24Zm-23 0V12l17.3 12Z"/></svg>
+      <svg v-if="showPrev" class="prev icon" viewBox="0 0 48 48" @click="prev"><path d="M11 36V12h3v24Zm26 0L19.7 24 37 12Z"/></svg>
     </div>
   </div>
 </template>
@@ -587,21 +587,23 @@ export default {
     grid-area: -2/3/-1/4;
     cursor: pointer;
   }
-  .play>.material-icons{
+  .icon{
+    width:56px;
+    height:56px;
+    fill:white;
+  }
+  .play>.icon{
     position:absolute;
     top:50%;
     left:50%;
     transform:translate(-50%,-50%);
-    font-size:56px;
   }
   .controls>.next{
     grid-area: 1/-2/2/-1;
-    font-size:56px;
     cursor:pointer;
   }
   .controls>.prev{
     grid-area: 1/1/2/2;
-    font-size:56px;
     cursor:pointer;
   }
   .controls>.timeline{
@@ -957,13 +959,7 @@ input.time:focus::-ms-fill-upper {
     width:400px;
     height:326px;
   }
-  .play>.material-icons{
-    font-size:48px;
-  }
-  .controls>.next{
-    font-size:48px;
-  }
-  .controls>.prev{
+  .icon{
     font-size:48px;
   }
   .controls>.timeline{
