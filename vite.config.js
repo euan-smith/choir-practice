@@ -8,14 +8,11 @@ export default defineConfig({
     vue(),
     VitePWA({ 
       registerType: 'autoUpdate',
-      devOptions: {
-        enabled: true
-      },
       workbox:{
         runtimeCaching:[
           {
             handler:'StaleWhileRevalidate',
-            urlPattern:/^.*\.(mp3|json)$/,
+            urlPattern:/\.(mp3|json|mid)/,
             options: {
               cacheName: 'scores',
               expiration: {
@@ -23,17 +20,21 @@ export default defineConfig({
                 maxAgeSeconds: 180 * 24 * 60 * 60, // 180 days
               },
             },
+            method: 'GET',
+            strategyOptions: {cacheableResponse: {statuses: [0, 200]}}
           },
           {
             handler:'CacheFirst',
-            urlPattern:/^.*\.js$/,
+            urlPattern:/\.(js|ttf)/,
             options: {
               cacheName: 'scores',
               expiration: {
-                maxEntries: 20,
+                maxEntries: 10,
                 maxAgeSeconds: 180 * 24 * 60 * 60, // 180 days
               },
             },
+            method: 'GET',
+            strategyOptions: {cacheableResponse: {statuses: [0, 200]}}
           }
         ]
       }
