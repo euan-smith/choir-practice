@@ -19,9 +19,8 @@ export default defineConfig({
                 maxEntries: 20,
                 maxAgeSeconds: 180 * 24 * 60 * 60, // 180 days
               },
+              cacheableResponse: {statuses: [0, 200]},
             },
-            method: 'GET',
-            strategyOptions: {cacheableResponse: {statuses: [0, 200]}}
           },
           {
             handler:'CacheFirst',
@@ -32,9 +31,8 @@ export default defineConfig({
                 maxEntries: 10,
                 maxAgeSeconds: 180 * 24 * 60 * 60, // 180 days
               },
+              cacheableResponse:{statuses:[0,200]},
             },
-            method: 'GET',
-            strategyOptions: {cacheableResponse: {statuses: [0, 200]}}
           }
         ]
       }
