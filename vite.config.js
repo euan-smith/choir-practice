@@ -24,9 +24,9 @@ export default defineConfig({
           },
           {
             handler:'CacheFirst',
-            urlPattern:/\.(js|ttf)/,
+            urlPattern:/\.(js|ttf|png)/,
             options: {
-              cacheName: 'scores',
+              cacheName: 'assets',
               expiration: {
                 maxEntries: 10,
                 maxAgeSeconds: 180 * 24 * 60 * 60, // 180 days
