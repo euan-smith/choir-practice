@@ -980,6 +980,10 @@ input.time:focus::-ms-fill-upper {
     font-size: 48px;
     padding-top:12px;
   }
+  .controls>.next, .controls>.prev{
+    width:44px;
+    height:44px;
+  }
   .main, .met-vol{
     font-size:14px;
   }
@@ -1013,9 +1017,13 @@ input.time:focus::-ms-fill-upper {
   }
     .controls>.next{
     grid-area:1/-2/2/-1;
+    width:44px;
+    height:44px;
   }
   .controls>.prev{
     grid-area:1/1/2/2;
+    width:44px;
+    height:44px;
   }
   .controls>.bar-title{
     grid-area:2/1/3/-3;
@@ -1025,7 +1033,7 @@ input.time:focus::-ms-fill-upper {
     grid-area:3/1/4/-3;
     font-size: 36px;
   }
-  .controls>input.bar{
+  .controls>input.bar, .controls>input.speed{
     padding:3px 0 0;
     width:100%;
   }
@@ -1034,11 +1042,11 @@ input.time:focus::-ms-fill-upper {
   }
   .controls>.beat-background{
     padding:0;
-    grid-area: 3/-3/6/-1;
+    grid-area: 3/-3/4/-1;
   }
   .controls>.beat{
-    padding:20px;
-    grid-area: 3/-3/6/-1;
+    padding:15px;
+    grid-area: 3/-3/4/-1;
   }
   .controls>.time-title{
     grid-area: 4/1/5/-3;
@@ -1047,6 +1055,9 @@ input.time:focus::-ms-fill-upper {
     padding:6px 0 0;
     font-size:36px;
     grid-area: 5/1/6/-3;
+  }
+  .controls>.speed{
+    font-size:36px;
   }
   .controls>.main{
     grid-area: 6/1/7/-1;
