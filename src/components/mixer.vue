@@ -351,7 +351,10 @@ export default {
       },50);
     },
     editSpeedDone(){
-      this.speed = this.newspeed/100;
+      if (this.newspeed) {
+        const ns = +this.newSpeed;
+        if (ns>0.2 && ns<5) this.speed = ns/100;
+      }
       this.newspeed=null;
     },
     editSpeedQuit(){
@@ -479,7 +482,7 @@ export default {
       <div class=speed-background />
       <div v-if="newspeed===null" class=speed @click="editSpeed">{{(speed*100).toFixed(0)}}</div>
       <template v-else>
-        <input type="text" ref="newspeed" v-model="newspeed" class=speed @blur="editSpeedDone" @keyup.enter="editSpeedDone" @keyup.escape="editSpeedQuit">
+        <input type="number" ref="newspeed" v-model="newspeed" class=speed @blur="editSpeedDone" @keyup.enter="editSpeedDone" @keyup.escape="editSpeedQuit">
       </template>
       <div class=play><svg class="icon" viewBox="0 0 48 48" @click="playing?pause():play()" ><path :d="playing?'M27.4 35.4V12.6h8v22.8Zm-14.8 0V12.6h8.05v22.8Z':'M16 37.85v-28l22 14Z'"/></svg></div>
       <svg class=pre-play viewBox="-2 -2 28 28" @click="prePlay">
@@ -505,7 +508,14 @@ export default {
 /* .mixer *{
   border: #a00 1px solid;
 } */
+input[type='number'] {
+    -moz-appearance:textfield;
+}
 
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+}
 
   .mixer{
     position:relative;
