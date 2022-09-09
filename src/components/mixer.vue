@@ -352,7 +352,7 @@ export default {
     },
     editSpeedDone(){
       if (this.newspeed) {
-        const ns = +this.newSpeed;
+        const ns = +this.newspeed;
         if (ns>20 && ns<500) this.speed = ns/100;
       }
       this.newspeed=null;
