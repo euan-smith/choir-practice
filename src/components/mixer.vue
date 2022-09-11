@@ -243,8 +243,10 @@ export default {
     async prePlay(){
       if (this.playing) return
       if (!this.ac) this.setupAudio();
+      // move back to the start of the current bar
+      while(this.beat.beat>1 && this.beat.prev) this.beat = this.beat.prev;
       // how many beats pre the current bar
-      const beatCount = this.beat.beat === 1 ? this.beat.timeSig : this.beat.beat - 1;
+      const beatCount = this.beat.timeSig;
       // time per beat
       const period = 60/this.beat.tempo;
       let beat = this.beat;
