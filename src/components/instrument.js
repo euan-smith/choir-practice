@@ -152,7 +152,7 @@ export class MidiInstrument{
       this.buffers.set(url,bufferPromise);
     }
     await bufferPromise;
-    console.log(url);
+    // console.log(url);
     return url;
   }
   static async player(ac,url,dest){
@@ -172,7 +172,7 @@ export class MidiInstrument{
       }
     }   
 
-    console.log(url, player);
+    // console.log(url, player);
     return player;
   }
 }
@@ -195,6 +195,7 @@ class SynthPlayer{
   constructor(ac,url){
     this.ac = ac;
     this.prog = url;
+    this.playing=[];
   }
 
   connect(dest){
@@ -202,20 +203,39 @@ class SynthPlayer{
     if (!this.synth){
       this.synth = new WebAudioTinySynth();
       this.synth.setAudioContext(this.ac, dest);
-      this.synth.setProgram(0,this.prog);
-      this.synth.setChVol(0,127);
+      for(let ch=0; ch<16;ch++) if (ch!==9){
+        this.synth.setProgram(ch,this.prog);
+        this.synth.setChVol(ch,191);
+      }
       SynthPlayer.synthMap.set(dest, this.synth);
     }
     this.dest = dest;
   }
   start(p, w){
-    this.synth.noteOn(0,p,127,w)
-    //returns a 
-    return {stop:(w)=>this.synth.noteOff(0,p,w)}
+    // clear out notes ended before or half a second after w
+    this.playing = this.playing.filter(n=>!n.e || n.e>w);
+    // find all the notes of the same pitch
+    const chan={};
+    for (let note of this.playing){
+      chan[note.ch] = 1;
+    }
+    let ch=0;
+    while (chan[ch] || ch===9) ch++;
+    if (ch<16){
+      const note = {ch,p,w,e:0};
+      this.synth.noteOn(ch,p,191,w);
+      this.playing.push(note);
+      return {stop:(w)=>{
+        note.e=w;
+        this.synth.noteOff(ch,p,w);
+      }}
+    }
+    return {stop:()=>{}}
   }
   stop(){
     //stops ALL sounds
-    this.synth.allSoundOff(0);
+    for(let ch=0; ch<16;ch++) this.synth.allSoundOff(ch);
+    this.playing=[];
   }
 
 }

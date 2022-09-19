@@ -114,7 +114,7 @@ export class MidiPartSource extends PartSource{
   }
   constructor(url){
     super(url);
-    console.log(url,this.query);
+    // console.log(url,this.query);
     this.trackIndex = +this.query.track;
     this.overrideProg = this.query.hasOwnProperty('prog');
     this.program = +this.query.prog;
@@ -136,7 +136,7 @@ export class MidiPartSource extends PartSource{
   async loop(ac, dest, when, from, until,speed){
     if (!this.instrument)this.instrument = await MidiInstrument.player(ac,this.inst,dest);
     if (!until) until = this.song.duration;
-    console.log(until);
+    // console.log(until);
     this.started = true;
     const offset = when*speed - from;
     let noteIdx = 0;
@@ -144,11 +144,14 @@ export class MidiPartSource extends PartSource{
     while (noteIdx<notes.length && (notes[noteIdx].when+notes[noteIdx].duration)<from) noteIdx++;
     const susNotes=[];
     const play = (p,w,d)=>{
-      this.instrument.play(p, w).stop(w+Math.min(d,3));
-      while (this.track.program>10 && d>3){
-        d-=3; w+=3;
-        this.instrument.play(p, w,{attack:0.3}).stop(w+Math.min(d,3));
-      }
+      // if (this.inst===53) console.log(p,w,d,JSON.stringify(this.instrument.playing));
+      this.instrument.play(p,w).stop(w+d);
+      // if (this.inst===53) console.log(JSON.stringify(this.instrument.playing));
+      // this.instrument.play(p, w).stop(w+Math.min(d,3));
+      // while (this.track.program>10 && d>3){
+      //   d-=3; w+=3;
+      //   this.instrument.play(p, w,{attack:0.3}).stop(w+Math.min(d,3));
+      // }
     }
     while(!this.stopping){
       const now = ac.currentTime*speed - offset;

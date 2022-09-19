@@ -130,13 +130,13 @@ export default {
       const ac = new AudioContext();
       this.loading = true;
       this.partSources = this.parts.map(p=>PartSource.fromUrl(p.url));
-      console.log('sources')
+      // console.log('sources')
       await Promise.all(this.partSources.map(d=>d.load(ac,part=>{
         let tot=0, dl=0;
         for(let p of this.partSources){tot+=p.bytes; dl+=p.received};
         this.loaded.data = dl/tot;
       }).then(()=>this.loaded.decoded += 1/this.partSources.length)))
-      console.log('getting sticks')
+      // console.log('getting sticks')
       this.sticks = await Promise.all(
         [stick4cs,stick4d].map(
           file=>fetch(file)
