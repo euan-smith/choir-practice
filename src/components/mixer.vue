@@ -5,6 +5,13 @@ import stick4cs from "../assets/stick-4cs.mp3";
 import stick4d from "../assets/stick-4d.mp3";
 import {PartSource} from "./part";
 const tickLeadTime = 0.053;
+function barText(beat){
+  if (!beat) return '000/0';
+      let s = ''+beat.bar;
+      // if (s.length<3) s='000'.slice(s.length)+s;
+      if (beat.repeat) s+='/'+beat.repeat;
+      return s;
+}
 export default {
   components:{
     Volume
@@ -66,6 +73,8 @@ export default {
       currentTime:0,
       playing:false,
       firstBeat:null,
+      startBeat:null,
+      endBeat:null,
       beat:null,
       beats:[],
       mainVol:1,
@@ -83,12 +92,7 @@ export default {
   },
   computed:{
     barInd(){
-      const beat = this.beat?.sourceBeat || this.beat;
-      if (!beat) return '000/0';
-      let s = ''+beat.bar;
-      // if (s.length<3) s='000'.slice(s.length)+s;
-      if (beat.repeat) s+='/'+beat.repeat;
-      return s;
+      return barText(this.beat?.sourceBeat || this.beat);
     },
     displayTime(){
       // return typeof this?.beat?.dTime === 'number' ? this.beat.dTime : this.currentTime;
@@ -396,14 +400,17 @@ export default {
       this.seekBar(spec);
     },
     seekBar(spec){
+      this.beat = this.findBeat(spec) || this.beat;
+      this.currentTime = this.beat.time;
+      this.$refs.time.value = this.currentTime / this.duration;
+    },
+    findBeat(spec){
       const beats = [];
       for (let b = this.firstBeat; b.next; b=b.next) if (b.bar === spec[0] && b.beat === 1) beats.push(b);
 
       if (beats.legnth===0) return;
       const rpt = beats.filter(b => b.repeat === spec[1]);
-      this.beat = rpt?.[0] || beats?.[0] || this.beat;
-      this.currentTime = this.beat.time;
-      this.$refs.time.value = this.currentTime / this.duration;
+      return rpt?.[0] || beats?.[0];
     },
     editBarQuit(){
       this.newbar=null;
