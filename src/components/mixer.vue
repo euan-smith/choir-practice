@@ -51,6 +51,10 @@ export default {
   mounted(){
    this.load();
    this.parseBars();
+   window.addEventListener('resize',this.resize);
+  },
+  unmounted(){
+    window.removeEventListener('resize',this.resize);
   },
   data(){
     return {
@@ -344,6 +348,19 @@ export default {
       this.pause();
       this.$emit('prev');
     },
+    reset(){
+      console.log(this.$refs.mutes);
+      for(let n=0; n<this.parts.length; n++) {
+        this.$refs.solos[n].checked=this.tracks[n].solo=false;
+        this.$refs.mutes[n].checked=this.tracks[n].mute=false;
+        this.tracks[n].vol = this.parts[n].volume;
+        this.$refs.partvol[n].setTo(this.tracks[n].vol);
+        this.setVols();
+      }
+    },
+    resize(){
+      for(let n=0; n<this.parts.length; n++) this.$refs.partvol[n].setTo(this.tracks[n].vol);
+    },
     editSpeed(){
       if (!this.canSetSpeed) return;
       this.pause();
@@ -395,27 +412,58 @@ export default {
 }
 
 /**
- * Layout
- *                            1     2   3   4     5      6       7     8      9
- * +--100px----+-----------+--50-+-50--+50-+50-+--50-+---125----+25+--100---+-50-+
- * |  PARTS    |  mute o   | Title                                               | 60px 1
- * |           +-----------+-----+-----+-------------+-------------+-------------+
- * |           |  solo o   |Main |Metro|    BAR                    |     BEAT    | 30px 2
- * |           +-----+-----+     |     |             |             |             |
- * |           |     |     |     |     |             |             |             | 80px 3
- * |           |     |     |     |     |             |             |             |
- * 4           |     |     |     |     |    TIME     |             |             | 30px 4
- * 0           |     |     |     |     |             |             |             | 80px 5
- * 0           |     |     |     |     |             |             |             |
- * p           |     |     |     |     +----+--------+-------------+--------+----+
- * x           |     |     |     |     | |< |                               | >. | 40 6
- * |           |     |     |     |     +----+---+----+----------+--+--------+----+
- * |           |     |     |     |     |        | A bar/rep   c | B              | 40 7
- * |           |     |     |     |     | PLAY   +---------------+----------------+
- * |           |     |     |     |     |        | C             | D              | 40 8
- * +-----------+-----+-----+-----+-----+----+---+----+----------+--+--------+----+
+ * Layout - full scale
+ * 
+ * v---------------------------------.mixer-(flex row)---------------------------v
+ * v--.track(s)v------------------.controls-(grid)-------------------------------v
  * 
  * 
+ * 
+ *                    1     2     3  4    5                6           7    8 
+ *        +--50-+--50-+--60-+-60--+30+50--+--------195-----+-----115---+-60-+ 1 -7
+ *    40  |  mute o   | Title                                               | 60px
+ *        +-----------+-----+-----+--+----+----------------+----------------+ 2 -6
+ *    40  |  solo o   |Main |Tick |    BAR title           |   BEAT title   | 30px 
+ *        +-----------+     |     |--+----+----------------+----------------+ 3 -5
+ *    30  |   vol     |     |     |    BAR                 |     BEAT       | 90px 
+ *        +-----------|     |     |                        |                |
+ *        |     |     |     |     |--+----+----------------+----------------+ 4 -4
+ *   110  |     |     |     |     |    TIME title          |   SPEED title  | 30px
+ *        |  N  | L   |     |     |--+----+----------------+----------------+ 5 -3
+ *        |  A  | E   |     |     |    TIME                |   SPEED        | 90px
+ *        +  M  | V   |     |     |                        |                | 
+ *        |  E  | E   |     |     +--+----+----------------+----------------+
+ *   140  |     | L   |     |     |  |    |                                 | 30px 6 -2
+ *        |     |     |     |     |--+    +                                 +
+ *        |     |     |     |     |  |    |                                 | 30px 7 -1
+ *        +-----+-----+-----+-----+--+----+----------------+----------------+
+ * 
+ * 
+ * 
+ * @media (max-width:1400px)
+ * 
+ *                    1     2     3  4    5                6           7    8 
+ *        +20-+20-+--60-+-60--+30+50--+--------195-----+-----115---+-60-+ 1 -7
+ *    30  |   o   | Title                                               | 60px
+ *        +-------+-----+-----+--+----+----------------+----------------+ 2 -6
+ *    30  |   o   |Main |Tick |    BAR title           |   BEAT title   | 30px 
+ *        +-------+     |     |--+----+----------------+----------------+ 3 -5
+ *     0  +-------+     |     |    BAR                 |     BEAT       | 90px 
+ *        |   L   |     |     |                        |                |
+ *        |   E   |     |     |--+----+----------------+----------------+ 4 -4
+ *   150  |   V   |     |     |    TIME title          |   SPEED title  | 30px
+ *        |   E   |     |     |--+----+----------------+----------------+ 5 -3
+ *        |   L   |     |     |    TIME                |   SPEED        | 90px
+ *        +-------+     |     |                        |                | 
+ *        |   N   |     |     +--+----+----------------+----------------+
+ *   150  |   A   |     |     |  |    |                                 | 30px 6 -2
+ *        |   M   |     |     |--+    +                                 +
+ *        |   E   |     |     |  |    |                                 | 30px 7 -1
+ *        +---+---+-----+-----+--+----+----------------+----------------+
+ * 
+ * 
+ * 
+
  * 
  * 
  */
@@ -431,14 +479,14 @@ export default {
         <div class=mute >
           <label>
             <div class="label">mute</div>
-            <input type=checkbox @change="e=>setMute(e,i)">
+            <input ref=mutes type=checkbox @change="e=>setMute(e,i)">
             <div class=light></div>
           </label>
         </div>
         <div class=solo>
           <label>
             <div class="label">solo</div>
-            <input type=checkbox @change="e=>setSolo(e,i)">
+            <input ref=solos type=checkbox @change="e=>setSolo(e,i)">
             <div class=light></div>
           </label>
         </div>
@@ -493,6 +541,8 @@ export default {
       <svg class=met viewBox="-128 -128 768 768" @click="toggleMetOn">
         <path :fill="metronome?.on ? '#eee' : '#555'" d="m 463.84136,154.89339 c -6.42,-6.42 -16.83,-6.42 -23.251,0 -71.31197,70.35135 -136.61146,132.25426 -208.741,199.7 h -105.82 c 23.35495,-140.1063 67.13099,-217.59716 120.727,-318.357996 0.86,-0.803 2.209,-0.801 3.067,-10e-4 20.50653,37.383983 48.51152,88.812606 72.26194,147.190756 1.186,9.002 12.2214,17.4338 23.3242,11.71391 9.002,-1.186 11.1594,-12.2324 9.9724,-21.2344 -21.69905,-53.89113 -30.43965,-85.078342 -83.11454,-161.702266 -13.446,-12.55299965 -34.508,-12.55699965 -47.954,10e-4 C 126.80877,149.30021 96.099465,324.74626 77.091365,474.25139 c -2.829,21.473 13.907,40.535 35.543995,40.535 h 271.311 c 21.661,0 38.373,-19.087 35.544,-40.535 -8.26237,-52.34207 -14.88466,-100.7074 -24.7871,-157.02622 -6.40949,-11.78839 -8.3911,-14.9907 -17.4031,-13.8037 -9.002,1.186 -13.59751,8.0528 -12.41051,17.0548 l 5.66371,34.11712 h -83.159 c 64.35441,-63.86663 129.29308,-130.29894 176.448,-176.449 6.42,-6.42 6.42,-16.83 -10e-4,-23.251 z m -88.956,232.582 12.004,91.074 c 0.112,0.846 -0.148,1.701 -0.708,2.341 -0.566,0.645 -1.38,1.014 -2.235,1.014 h -271.311 c -0.855,0 -1.668,-0.369 -2.231,-1.011 -0.564,-0.643 -0.824,-1.499 -0.712,-2.347 l 12.003,-91.072 h 253.19 z" />
       </svg>
+      <svg class=reset @click=reset fill="#eee" viewBox="0 0 48 48"><path d="M26 18.5v-3h6.5V6h3v9.5H42v3ZM32.5 42V21.5h3V42Zm-20 0v-9H6v-3h16v3h-6.5v9Zm0-15V6h3v21Z"/></svg>
+      <svg class=back fill="#eee" viewBox="0 0 48 48"><path d="M11 36V12h3v24Zm26 0L19.7 24 37 12Z"/></svg>
       <label class=timeline>
         <input class=time ref=time type=range min=0 max=1 step=0.001 value=0 @input="setTime">
       </label>
@@ -576,7 +626,7 @@ input::-webkit-inner-spin-button {
 
   .mixer>.controls{
     display:grid;
-    grid-template:60px 30px 90px 30px 90px 30px 30px / 60px 60px 30px 50px 195px 115px 60px;
+    grid-template:60px 30px 90px 30px 90px 30px 30px / 60px 60px 30px 30px 50px 165px 115px 60px;
     width:570px;
     height:360px;
     background:#333;
@@ -587,16 +637,24 @@ input::-webkit-inner-spin-button {
     /* border: #a00 1px solid; */
   }
   .controls>.play{
-    grid-area: 6/4/-1/5;
+    grid-area: 6/5/-1/6;
     position:relative;
     cursor: pointer;
   }
   .controls>.pre-play{
-    grid-area: -3/3/-2/4;
+    grid-area: -3/4/-2/5;
     cursor: pointer;
   }
   .controls>.met{
+    grid-area: -3/3/-2/4;
+    cursor: pointer;
+  }
+  .controls>.reset{
     grid-area: -2/3/-1/4;
+    cursor: pointer;
+  }
+  .controls>.back{
+    grid-area:-2/4/-1/5;
     cursor: pointer;
   }
   .icon{
@@ -620,7 +678,7 @@ input::-webkit-inner-spin-button {
   }
   .controls>.timeline{
     padding:14px 0;
-    grid-area:6/5/7/-1;
+    grid-area:6/6/7/-1;
   }
   .controls>.title{
     grid-area:1/2/2/-2;
@@ -846,7 +904,7 @@ input::-webkit-inner-spin-button {
 
 input.time{
   -webkit-appearance: none;
-  width:360px;
+  width:330px;
   height:32px;
   background:#0000;
 }
@@ -967,7 +1025,7 @@ input.time:focus::-ms-fill-upper {
     height:20px;
   }
   .mixer>.controls{
-    grid-template:46px 30px 90px 30px 90px 20px 20px / 40px 40px 20px 40px 140px 80px 40px;
+    grid-template:46px 30px 90px 30px 90px 20px 20px / 40px 40px 20px 20px 40px 120px 80px 40px;
     width:400px;
     height:326px;
   }
@@ -1010,7 +1068,7 @@ input.time:focus::-ms-fill-upper {
     top:0;
   }
   input.time{
-  width:240px;
+  width:220px;
   height:24px;
   margin-top:-6px;
   }
@@ -1020,9 +1078,9 @@ input.time:focus::-ms-fill-upper {
     flex-direction: column-reverse;
   }
     .mixer>.controls{
-    grid-template: 46px 24px 60px 24px 60px 40px 40px 46px / 40px 40px 40px 3fr 2fr 40px;
+    grid-template: 46px 24px 60px 24px 60px 40px 40px 30px 30px / 30px 30px 60px 3fr 2fr 40px;
     width:calc(100vw - 40px);
-    height:340px;
+    height:354px;
   }
   .controls>.title{
     grid-area:1/2/2/-2;
@@ -1078,13 +1136,19 @@ input.time:focus::-ms-fill-upper {
     grid-area: 7/1/8/-1;
   }
   .controls>.play{
-    grid-area: 8/3/9/4;
+    grid-area: 8/3/-1/4;
   }
   .controls>.pre-play{
     grid-area: 8/2/9/3;
   }
   .controls>.met{
     grid-area: 8/1/9/2;
+  }
+  .controls>.reset{
+    grid-area: 9/1/10/2;
+  }
+  .controls>.back{
+    grid-area:9/2/10/3;
   }
   .controls>.main, .controls>.met-vol{
     flex-direction: row;
@@ -1105,12 +1169,12 @@ input.time:focus::-ms-fill-upper {
     width:auto;
   }
   .controls>.timeline{
-    grid-area:8/4/9/-1;
+    grid-area:8/4/-1/-1;
   }
   input.time{
   width:90%;
   height:24px;
-  margin-top:-6px;
+  margin-top:4px;
   }
 
   .mixer>.tracks{
