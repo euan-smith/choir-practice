@@ -87,6 +87,7 @@ export default {
       sticks:[],
       metronome:{vol:1, on:false},
       playProm:null,
+      recorder:null,
     }
   },
   computed:{
@@ -182,11 +183,43 @@ export default {
         source: null,
       }
       for (let track of this.tracks){
-        track.anal.connect(track.gainNode).connect(this.ac.destination);
+        track.anal.connect(track.gainNode);
       }
-      this.metronome.gainNode.connect(this.ac.destination);
+      this.setOutput(this.ac.destination);
       if (this.beat) this.currentTime = this.beat.time;      
       this.setVols();
+    },
+    setOutput(dest){
+      for (let track of this.tracks){
+        track.gainNode.connect(dest);
+      }
+      this.metronome.gainNode.connect(dest);
+    },
+    unsetOutput(dest){
+      for (let track of this.tracks){
+        track.gainNode.disconnect(dest);
+      }
+      this.metronome.gainNode.disconnect(dest);
+    },
+    initRecorder(){
+      const chunks = [];
+      this.streamDest = this.ac.createMediaStreamDestination();
+      this.setOutput(this.streamDest);
+      this.recorder = new MediaRecorder(this.streamDest.stream);
+      this.recorder.ondataavailable = e => chunks.push(e.data);
+      this.recorder.onstop = e=>{
+        const blob = new Blob(chunks, {type:"audio/ogg; codecs=opus"});
+        const {dl} = this.$refs;
+        dl.href = URL.createObjectURL(blob);
+        dl.click();
+      }
+      this.recorder.start();
+    },
+    recorderDone(){
+      this.unsetOutput(this.streamDest);
+      this.recorder.stop();
+      this.streamDest = null;
+      this.recorder = null;
     },
     setMetVol(e){
       this.metronome.vol = e.target.value;
@@ -230,9 +263,11 @@ export default {
       });
       metronome.gainNode.gain.value = metronome.on || this.beat?.tickOn ? metronome.vol : 0;
     },
-    play(){
+    play(rec){
+      //if (rec) {console.log('record!'); return}
       if (this.playing) return
       if (!this.ac) this.setupAudio();
+      if (rec) this.initRecorder();
       const {ac,tracks} = this;
       for (let track of tracks){
         track.partSource.start(ac,track.anal,0,this.currentTime,this.duration,this.speed);
@@ -247,7 +282,8 @@ export default {
       }
       this.playProm = this.playLoop(this.speed);
     },
-    async prePlay(){
+    async prePlay(rec){
+      if (rec) {console.log('record!'); return}
       if (this.playing) return
       if (!this.ac) this.setupAudio();
       // move back to the start of the current bar
@@ -329,6 +365,7 @@ export default {
     },
     async pause(){
       if (!this.playing) return;
+      if (this.recorder) this.recorderDone();
       this.playing=false;
       await this.playProm;
       const {tracks, metronome, beat} = this;
@@ -549,8 +586,9 @@ export default {
       <template v-else>
         <input type="number" ref="newspeed" v-model="newspeed" class=speed @blur="editSpeedDone" @keyup.enter="editSpeedDone" @keyup.escape="editSpeedQuit">
       </template>
-      <div class=play><svg class="icon" viewBox="0 0 48 48" @click="playing?pause():play()" ><path :d="playing?'M27.4 35.4V12.6h8v22.8Zm-14.8 0V12.6h8.05v22.8Z':'M16 37.85v-28l22 14Z'"/></svg></div>
-      <svg class=pre-play viewBox="-2 -2 28 28" @click="prePlay">
+      <div class=play><svg class="icon" viewBox="0 0 48 48" @click.exact="playing?pause():play()" @click.ctrl="playing?pause():play(true)"><path :d="playing?'M27.4 35.4V12.6h8v22.8Zm-14.8 0V12.6h8.05v22.8Z':'M16 37.85v-28l22 14Z'"/></svg></div>
+      <a download ref=dl :v-show="false"></a>
+      <svg class=pre-play viewBox="-2 -2 28 28" @click.exact="prePlay()" @click.ctrl="prePlay(true)">
       <path :fill="playing?'#555':'#eee'" d="m 8.9838564,1.5166215 v 2 h 5.9999996 v -2 z m 2.9999996,3 c -4.9699996,0 -8.9999996,4.0299999 -8.9999996,8.9999995 0,4.97 4.02,9 8.9999996,9 4.98,0 9,-4.03 9,-9 0,-2.12 -0.740703,-4.0693745 -1.970703,-5.6093745 l 1.419922,-1.421875 c -0.43,-0.51 -0.900156,-0.9882031 -1.410156,-1.4082031 l -1.419922,1.4199219 c -1.55,-1.24 -3.499141,-1.9804688 -5.619141,-1.9804688 z m -1.789062,4.7480469 6,4.4999996 -6,4.5 z" />
       </svg>
       <svg class=met viewBox="-128 -128 768 768" @click="toggleMetOn">
