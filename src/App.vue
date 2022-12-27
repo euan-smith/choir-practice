@@ -13,15 +13,18 @@
  * <list
  */
 import Mixer from './components/mixer.vue';
+import Selector from './components/selector.vue';
 export default {
   components:{
-    Mixer
+    Mixer,
+    Selector
   },
   data(){
     return {
       error:null,
       title:'',
       scores:[],
+      perfList:{},
       scoreList:{},
       index:0,
       ready:false,
@@ -54,13 +57,18 @@ export default {
   methods:{
     readScores(){
       const s = localStorage.getItem('scores');
+      const p = localStorage.getItem('perfs');
       try{
         this.scoreList = JSON.parse(s) || {};
+      } catch(e){}
+      try{
+        this.perfList = JSON.parse(p) || {};
       } catch(e){}
     },
     writeScores(){
       console.log({...this.scoreList});
       localStorage.setItem('scores',JSON.stringify(this.scoreList));
+      localStorage.setItem('perfs',JSON.stringify(this.perfList));
     },
     addScore(name, title){
       this.scoreList[name]=title;
@@ -70,32 +78,57 @@ export default {
       delete this.scoreList[name];
       this.writeScores();
     },
+    addPerf(name, def){
+      this.perfList[name]=def;
+      this.writeScores();
+    },
+    removePerf(name){
+      delete this.perfList[name];
+      this.writeScores();
+    },
     loadScore(name){
       location='?score='+name;
-    }
+    },
+    async readFile(file){
+      let data;
+      try{
+        data = await fetch('/'+file+'.json').then(r=>r.json());
+      } catch(e){
+        data = await fetch('/scores/'+file+'.json').then(r=>r.json());
+      }
+      if (data.type==='score' || !data.type){
+        if (data.parts && data.bars){
+          data = {
+            title: data.title,
+            scores: [{subtitle:'', ...data}]
+          }
+        }
+        this.addScore(file, data.title);
+        return data;
+      } else if (data.type==='performance'){
+        this.addPerf(file, data);
+        for (let score of data.scores){
+          await this.readFile(score);
+        }
+      }
+    },
   },
   async mounted(){
     this.readScores();
     if (window.location.search){
       const q = window.location.search.slice(1).split('&').map(s=>s.split('=')).reduce((o,d)=>Object.assign(o,{[d[0]]:d[1]}),{});
-      try{
-        const data = await fetch('/'+q.score+'.json').then(r=>r.json());
-        if (data.parts && data.bars){
-          // V1 of the file format
-          this.title = data.title;
-          this.scores = [{
-            subtitle:'',
-            ...data
-          }]
-          this.addScore(q.score,data.title);
-        } else if (data.scores && data.title){
-          this.title = data.title;
-          this.scores = data.scores;
-          this.addScore(q.score, data.title);
-        } else this.error = [`Invlid score "${q.score}"`];
-      } catch(e){
-        this.error = [`Unable to load score "${q.score}"`];
-        this.removeScore(q.score);
+      if (q.score){
+        try{
+          const data = await this.readFile(q.score);
+          if (data.scores && data.title){
+            this.title = data.title;
+            this.scores = data.scores;
+          } else this.error = [`Invlid score "${q.score}"`];
+        } catch(e){
+          console.log(e);
+          this.error = [`Unable to load score "${q.score}"`];
+          this.removeScore(q.score);
+        }
       }
     }
     this.ready=true;
@@ -110,29 +143,10 @@ export default {
     </div>
   </div>
   <div v-else-if=!ready />
-  <div v-else class="selector-container">
-  <div class=selector>
-    <div v-if=error class=error>
-        <p :key=i v-for="(line,i) of error">{{line}}</p>
+  <div v-else class=container>
+    <div class=border>
+      <selector :scores=scoreList :perfs=perfList />
     </div>
-    <div v-if="scoreNames?.length" class=list-container>
-      <div class="msg">
-        Load a previous score by clicking the list below.
-      </div>
-      <div  class=score-list >
-        <div :key=i v-for="(s,i) of scoreNames" class=score @click=loadScore(s) >{{scoreList[s]}}</div>
-      </div>
-      <div class=msg2>
-        If the score you want is not here, you need a new url link from your choir master.
-      </div>
-    </div>
-    <div v-else>
-      <div class="error">
-        No score to display.
-      </div>
-      You don't seem to have accessed a score - you need a link to one from your choir master.
-    </div>
-  </div>
   </div>
 </template>
 
@@ -158,38 +172,9 @@ div.selector-container{
   width:100vw;
   height:100vh;
 }
-div.selector{
-  max-width: 512px;
-  background:white;
-  position:absolute;
-  left:50%;
-  top:40px;
-  transform:translate(-50%,0);
-  padding:1em;
-  box-shadow: #0004 -3px 3px 10px;
-  border-radius: 8px;
-}
 .msg{
   font-size: 1.2em;
   padding: 5px;
-}
-.score-list{
-  width:100%;
-  display:flex;
-  flex-direction:column;
-  margin: 5px 2px 8px;
-}
-.score-list>.score{
-  font-size:1.1em;
-  width:calc(100% - 20px);
-  padding:2px 1em;
-  margin: 2px 2px;
-  border-radius: 4px;
-  transition: 0.2s linear;
-}
-.score-list>.score:hover{
-  background:#eee;
-  cursor: pointer;
 }
 .container{
   padding:5px;
@@ -219,11 +204,11 @@ div.error:first-child{
   color:#300;
 }
 
-@media (max-height:360px), (max-width:640px){
+/* @media (max-height:360px), (max-width:640px){ */
   html{
     height:auto;
     overflow-y: scroll;
   }
-}
+/* } */
 
 </style>

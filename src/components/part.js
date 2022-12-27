@@ -29,7 +29,13 @@ export class PartSource{
   }
 
   static async chunkLoader(file, instance, cb){
-    const response = await fetch(file);
+    let response;
+    response = await fetch(file);
+    if (!response.ok){
+      if (file[0]==='/') file = '/scores' + file;
+      else file = '/scores/' + file;
+      response = await fetch(file);  
+    }
     const reader = response.body.getReader();
   
     // Step 2: get total length

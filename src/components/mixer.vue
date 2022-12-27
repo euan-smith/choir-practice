@@ -6,10 +6,10 @@ import stick4d from "../assets/stick-4d.mp3";
 import {PartSource} from "./part";
 const tickLeadTime = 0.053;
 function barText(beat){
-  if (!beat) return '000/0';
+  if (!beat) return '000.0';
       let s = ''+beat.bar;
       // if (s.length<3) s='000'.slice(s.length)+s;
-      if (beat.repeat) s+='/'+beat.repeat;
+      if (beat.repeat) s+='.'+beat.repeat;
       return s;
 }
 export default {
@@ -48,7 +48,7 @@ export default {
     },
     newbar(){
       if (this.newbar === null || this.newbar === '') return;
-      if (/^([0-9]+\/)?[0-9]*$/.test(this.newbar)){
+      if (/^([0-9]+\.)?[0-9]*$/.test(this.newbar)){
         this.lastNewbar=this.newbar;
       } else {
         setTimeout(()=>this.newbar = this.lastNewbar);
@@ -88,6 +88,7 @@ export default {
       metronome:{vol:1, on:false},
       playProm:null,
       recorder:null,
+      showPiano:false,
     }
   },
   computed:{
@@ -435,7 +436,8 @@ export default {
       const bar = this.newbar;
       this.newbar=null;
       if (!bar) return;
-      const spec = bar.split('/').map(s=>parseInt(s));
+      console.log(bar);
+      const spec = (bar+'').split('.').map(s=>parseInt(s));
       spec.push(1);
       // first find all bars that meet the bar spec
       this.seekBar(spec);
@@ -566,12 +568,12 @@ export default {
         <div class=m-ind>{{(metronome.vol*100).toFixed(0)}}</div>
         <volume class=slider thumb="blue" min=0 max=1 step=0.001 value=1 @input="setMetVol" disabled />
       </label>
-      <div class=bar-title>Bar / Repeat</div>
+      <div class=bar-title>Bar . Repeat</div>
       <div class=bar-background />
 
       <div v-if="newbar===null" class=bar @click="editBar">{{barInd}}</div>
       <template v-else>
-        <input type="text" ref="newbar" v-model="newbar" class="bar" @blur="editBarDone" @keyup.enter="editBarDone" @keyup.escape="editBarQuit">
+        <input type="number" ref="newbar" v-model="newbar" class="bar" @blur="editBarDone" @keyup.enter="editBarDone" @keyup.escape="editBarQuit">
       </template>
       
       <div class=beat-title>Beat</div>
@@ -754,6 +756,7 @@ input::-webkit-inner-spin-button {
     font-size: 55px;
     padding-top:8px;
     color:#afa;
+    cursor: text;
   }
   .controls>input.bar{
     font-family: Lato;
@@ -826,6 +829,7 @@ input::-webkit-inner-spin-button {
     font-size: 55px;
     padding-top:8px;
     color:#ffa;
+    cursor: text;
   }
   .controls>input.speed{
     font-family: Lato;
