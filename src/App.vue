@@ -14,10 +14,12 @@
  */
 import Mixer from './components/mixer.vue';
 import Selector from './components/selector.vue';
+import Piano from './components/piano.vue';
 export default {
   components:{
     Mixer,
-    Selector
+    Selector,
+    Piano,
   },
   data(){
     return {
@@ -28,6 +30,7 @@ export default {
       scoreList:{},
       index:0,
       ready:false,
+      showPiano:false,
     }
   },
   computed:{
@@ -137,7 +140,10 @@ export default {
 </script>
 
 <template>
-  <div v-if=showScore class=container>
+  <div v-if=showPiano class=container>
+    <piano></piano>
+  </div>
+  <div v-else-if=showScore class=container>
     <div class=border>
       <mixer class=mixer :parts=score.parts :title=fullTitle :bars=score.bars :show-next=showNext :show-prev=showPrev @next=++index @prev=--index />
     </div>
