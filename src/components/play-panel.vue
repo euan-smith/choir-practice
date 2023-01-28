@@ -25,7 +25,9 @@ export default {
         <path :fill="playing?'#555':'#eee'" d="m 8.9838564,1.5166215 v 2 h 5.9999996 v -2 z m 2.9999996,3 c -4.9699996,0 -8.9999996,4.0299999 -8.9999996,8.9999995 0,4.97 4.02,9 8.9999996,9 4.98,0 9,-4.03 9,-9 0,-2.12 -0.740703,-4.0693745 -1.970703,-5.6093745 l 1.419922,-1.421875 c -0.43,-0.51 -0.900156,-0.9882031 -1.410156,-1.4082031 l -1.419922,1.4199219 c -1.55,-1.24 -3.499141,-1.9804688 -5.619141,-1.9804688 z m -1.789062,4.7480469 6,4.4999996 -6,4.5 z" />
       </svg>
       <div class=toggle @click="expanded=!expanded" >
-        <svg class=toggle viewBox="0 8 48 32" :style="`transform:rotate(${expanded?90:-90}deg)`"><path d="m24 30.75-12-12 2.15-2.15L24 26.5l9.85-9.85L36 18.8Z"/></svg>
+
+          <svg class=toggle viewBox="6 4 36 36" :style="`transform:rotate(${expanded?90:-90}deg)`"><path d="m24 30.75-12-12 2.15-2.15L24 26.5l9.85-9.85L36 18.8Z"/></svg>
+
       </div>
       <svg class="play" viewBox="0 0 48 48" @click.exact="playing?pause():play()" @click.ctrl="playing?pause():play(true)"><path :d="playing?'M27.4 35.4V12.6h8v22.8Zm-14.8 0V12.6h8.05v22.8Z':'M16 37.85v-28l22 14Z'"/></svg>
 
@@ -44,11 +46,19 @@ export default {
     height:48px;
     margin-top:4px;
   }
+  div.toggle{
+    margin:2px 0;
+    padding:0;
+    position:relative;
+  }
+
   svg.toggle{
-    flex:0 0 24px;
-    height:48px;
-    fill:white;
+    margin-top:10px;
+    height:32px;
+    fill:#888;
     transition:transform linear 0.5s;
+    border-radius:50%;
+    border:1px solid #555;
   }
   svg.play{
     flex:0 0 56px;
