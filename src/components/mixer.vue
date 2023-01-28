@@ -1,6 +1,7 @@
 
 <script>
 import Volume from "./volume.vue";
+import PlayPanel from "./play-panel.vue";
 import stick4cs from "../assets/stick-4cs.mp3";
 import stick4d from "../assets/stick-4d.mp3";
 import {PartSource} from "./part";
@@ -14,7 +15,8 @@ function barText(beat){
 }
 export default {
   components:{
-    Volume
+    Volume,
+    PlayPanel,
   },
   props:{
     parts:{
@@ -601,6 +603,7 @@ export default {
       <label class=timeline>
         <input class=time ref=time type=range min=0 max=1 step=0.001 value=0 @input="setTime">
       </label>
+      <play-panel class=pp style="grid-area: -3/3/-1/-1" />
       <svg v-if="showNext" class="next icon" viewBox="0 0 48 48" @click="next"><path d="M34 36V12h3v24Zm-23 0V12l17.3 12Z"/></svg>
       <svg v-if="showPrev" class="prev icon" viewBox="0 0 48 48" @click="prev"><path d="M11 36V12h3v24Zm26 0L19.7 24 37 12Z"/></svg>
     </div>

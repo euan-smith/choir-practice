@@ -27,5 +27,4 @@ dist-ssr
 !src/assets/*.mp3
 public/scores/*
 public/*.json
-public/*.js
 !public/manifest.json
