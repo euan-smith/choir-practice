@@ -326,7 +326,7 @@ export default {
       let binCount = null, data = null, ctxs=[];
       while (this.playing){
         this.currentTime = Math.min(ac.currentTime*speed + this.offset, this.duration);
-        this.$refs.time.value = this.displayTime / this.duration;
+        this.$refs.time.setValue(this.displayTime / this.duration);
         const oldBeat = this.beat;
         if (this.beat.time>this.currentTime+0.0001) this.beat = this.firstBeat;
         while (this.beat.next && this.beat.next.time<this.currentTime) {
@@ -452,7 +452,7 @@ export default {
     gotoBar(beat){
       this.beat = beat;
       this.currentTime = this.beat.time;
-      this.$refs.time.value = this.currentTime / this.duration;
+      this.$refs.time.setValue(this.currentTime / this.duration);
     },
     findBeat(spec){
       const beats = [];
@@ -603,6 +603,7 @@ export default {
         @preplay="prePlay(record)"
         @play="playing?pause(record):play(record)"
         @piano="$emit('piano')"
+        ref="time"
       />
       <svg v-if="showNext" class="next icon" viewBox="0 0 48 48" @click="next"><path d="M34 36V12h3v24Zm-23 0V12l17.3 12Z"/></svg>
       <svg v-if="showPrev" class="prev icon" viewBox="0 0 48 48" @click="prev"><path d="M11 36V12h3v24Zm26 0L19.7 24 37 12Z"/></svg>

@@ -13,6 +13,10 @@ export default {
       type: Boolean,
       default: false
     },
+    value:{
+      type: Number,
+      default:0
+    }
   },
   data(){
     return{
@@ -28,9 +32,17 @@ export default {
     },
     setTime(e){
       this.$emit('time',e);
+    },
+    setValue(v){
+      this.$refs.time.value=v;
+    }
+  },
+  watch:{
+    value(v){
+      console.log(v)
+      this.$refs.time.value=v;
     }
   }
-
 }
 </script>
 <template>
