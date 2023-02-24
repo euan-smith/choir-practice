@@ -141,6 +141,9 @@ export class MidiInstrument{
       if (url===0) url='./grand_piano.js';
       // else if (url<10) url = `https://gleitz.github.io/midi-js-soundfonts/MusyngKite/${INSTRUMENTS[url]}-mp3.js`;
       // else url = `https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/${INSTRUMENTS[url]}-mp3.js`;
+      else if (url===52 || url===53 || url===54){
+        url='./choir_aahs-mp3.js';
+      }
     }
     let bufferPromise = this.buffers.get(url);
     if (!bufferPromise){
@@ -164,12 +167,12 @@ export class MidiInstrument{
       player.connect(dest);
       player.play = player.start;
     } else {
-      player = this.players.get(url);
-      if (!player){
+      // player = this.players.get(url);
+      // if (!player){
         player = samplePlayer(ac, b, {loop:true, gain:4.0});
         player.connect(dest);
-        this.players.set(url,player);
-      }
+        // this.players.set(url,player);
+      // }
     }   
 
     // console.log(url, player);
