@@ -60,6 +60,7 @@
 </script>
 <template>
   <div class=keyboard>
+    <div @click="$emit('close')">close</div>
     <div v-for="board of keyMap" class=board>
       <div class="blacks">
         <div class="key start" 
