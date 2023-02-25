@@ -14,6 +14,7 @@
       return {
         selected:null,
         addError:false,
+        version:__APP_VERSION__,
       }
     },
     computed:{
@@ -48,7 +49,7 @@
 </script>
 <template>
   <div class=selector>
-    <div class=title>Choir Practice</div>
+    <div class=title>Choir Practice <span style="font-size: 0.7em">v{{version}}</span></div>
     <div class=controls>
       <div class=perfs>
         <div class=title>Rehearsal</div>

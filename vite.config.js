@@ -38,5 +38,8 @@ export default defineConfig({
       }
     })
   ],
+  define: {
+    '__APP_VERSION__': JSON.stringify(process.env.npm_package_version),
+  }
   // assetsInclude:['public/*.json','public/*.mp3']
 })
