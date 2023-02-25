@@ -141,11 +141,11 @@ export default {
 
 <template>
   <div v-if=showPiano class=container>
-    <piano></piano>
+    <piano @close="showPiano=false"></piano>
   </div>
-  <div v-else-if=showScore class=container>
+  <div v-if=showScore class=container>
     <div class=border>
-      <mixer class=mixer :parts=score.parts :title=fullTitle :bars=score.bars :show-next=showNext :show-prev=showPrev @next=++index @prev=--index />
+      <mixer @piano="showPiano=true" class=mixer :parts=score.parts :title=fullTitle :bars=score.bars :show-next=showNext :show-prev=showPrev @next=++index @prev=--index />
     </div>
   </div>
   <div v-else-if=!ready />

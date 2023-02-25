@@ -16,7 +16,8 @@
         inst: null,
         player: null,
         ready: false,
-        sounds: {}
+        sounds: {},
+        size:70,
       }
     },
     async mounted(){
@@ -24,6 +25,10 @@
       this.inst = await MidiInstrument.load(this.ac,0);
       this.player = await MidiInstrument.player(this.ac,this.inst,this.ac.destination);
       this.ready=true;
+      window.addEventListener('resize',this.resize);
+    },
+    unmounted() {
+      window.removeEventListener('resize',this.resize);
     },
     computed:{
       keyMap(){
@@ -42,6 +47,17 @@
       }
     },
     methods:{
+      resize(){
+        const {clientWidth, clientHeight} = this.$refs.keyboard;
+        this.keys = Math.floor(clientWidth/this.size);
+        const rows = Math.max(Math.floor(clientHeight/this.size/4),1);
+        this.rows=[];
+        for (let r=rows-1; r>-rows; r-=2){
+          const ri = Math.floor((r-1)*this.keys/1.6+59);
+          if (isWhite(ri)) this.rows.push(ri); else this.rows.push(ri-1);
+        }
+        console.log([...this.rows], this.keys, rows);
+      },
       sound(pitch){
         if (pitch && this.ready){
           if (this.sounds[pitch]) return;
@@ -59,7 +75,8 @@
   }
 </script>
 <template>
-  <div class=keyboard>
+  <div class=keyboard ref="keyboard">
+    <div class=close @click="$emit('close')">close</div>
     <div v-for="board of keyMap" class=board>
       <div class="blacks">
         <div class="key start" 
@@ -90,12 +107,19 @@
           @mousedown="sound(key)"
           @mouseleave="stop(key)"
           @mouseup="stop(key)"
-          ></div>
+          >{{key%12?'':key/12-1}}</div>
       </div>
     </div>
   </div>
 </template>
 <style scoped>
+  .close{
+    color: white;
+    text-align: center;
+    font-size: 3em;
+    font-weight: bold;
+    cursor: pointer;
+  }
   .keyboard{
     width:calc(100vw);
     height:calc(100vh - 10px);
@@ -145,12 +169,13 @@
     border:2px solid black;
     transform:scaleY(200%);
     transform-origin:bottom center;
-    background:#fff8;
     z-index:0;
     background:white;
+    font-size: 1.5em;
+    font-weight:bold;
   }
   .whites>.midc{
-    background:#aaa
+    background:#aaa;
   }
   .touch{
     position:absolute;

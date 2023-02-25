@@ -27,7 +27,6 @@ dist-ssr
 !src/assets/*.mp3
 public/scores/*
 public/*.json
-public/*.js
 !public/manifest.json
 !public/choir_aahs-mp3.js
 
