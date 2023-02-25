@@ -133,16 +133,23 @@ import WebAudioTinySynth from 'webaudio-tinysynth';
 //   "gunshot"
 // ]
 // https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/marimba-mp3.js
+
+const PIANO = './grand_piano.js';
+const VOICES = './choir_aahs-mp3.js';
+
+function getGain(url){
+  if (url===VOICES) return 12.0;
+  return 4.0;
+}
+
 export class MidiInstrument{
   static buffers=new Map();
   static players=new Map();
   static async load(ac,url){
     if (typeof url === "number"){
-      if (url===0) url='./grand_piano.js';
-      // else if (url<10) url = `https://gleitz.github.io/midi-js-soundfonts/MusyngKite/${INSTRUMENTS[url]}-mp3.js`;
-      // else url = `https://gleitz.github.io/midi-js-soundfonts/FluidR3_GM/${INSTRUMENTS[url]}-mp3.js`;
+      if (url===0) url=PIANO;
       else if (url===52 || url===53 || url===54){
-        url='./choir_aahs-mp3.js';
+        url=VOICES;
       }
     }
     let bufferPromise = this.buffers.get(url);
@@ -155,7 +162,6 @@ export class MidiInstrument{
       this.buffers.set(url,bufferPromise);
     }
     await bufferPromise;
-    // console.log(url);
     return url;
   }
   static async player(ac,url,dest){
@@ -167,13 +173,9 @@ export class MidiInstrument{
       player.connect(dest);
       player.play = player.start;
     } else {
-      // player = this.players.get(url);
-      // if (!player){
-        player = samplePlayer(ac, b, {loop:true, gain:4.0});
-        player.connect(dest);
-        // this.players.set(url,player);
-      // }
-    }   
+      player = samplePlayer(ac, b, {loop:true, gain:getGain(url)});
+      player.connect(dest);
+    }
 
     // console.log(url, player);
     return player;
