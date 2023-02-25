@@ -17,10 +17,11 @@
         player: null,
         ready: false,
         sounds: {},
-        size:70,
+        size:60,
       }
     },
     async mounted(){
+      this.resize();
       this.ac = new AudioContext();
       this.inst = await MidiInstrument.load(this.ac,0);
       this.player = await MidiInstrument.player(this.ac,this.inst,this.ac.destination);
@@ -50,13 +51,17 @@
       resize(){
         const {clientWidth, clientHeight} = this.$refs.keyboard;
         this.keys = Math.floor(clientWidth/this.size);
-        const rows = Math.max(Math.floor(clientHeight/this.size/4),1);
+        const rows = Math.max(Math.floor(clientHeight/this.size/4+0.5),1);
         this.rows=[];
         for (let r=rows-1; r>-rows; r-=2){
           const ri = Math.floor((r-1)*this.keys/1.6+59);
           if (isWhite(ri)) this.rows.push(ri); else this.rows.push(ri-1);
         }
         console.log([...this.rows], this.keys, rows);
+      },
+      scale(d){
+        this.size+=d*5;
+        this.resize();
       },
       sound(pitch){
         if (pitch && this.ready){
@@ -76,7 +81,11 @@
 </script>
 <template>
   <div class=keyboard ref="keyboard">
-    <div class=close @click="$emit('close')">close</div>
+    <div class=toolbar>
+      <div class=scale @click="scale(+1)"> >&lt; </div>
+      <div class=close @click="$emit('close')">close</div>
+      <div class=scale @click="scale(-1)"> &lt;> </div>
+    </div>
     <div v-for="board of keyMap" class=board>
       <div class="blacks">
         <div class="key start" 
@@ -113,7 +122,12 @@
   </div>
 </template>
 <style scoped>
-  .close{
+  .toolbar{
+    display:flex;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  .close, .scale{
     color: white;
     text-align: center;
     font-size: 3em;
