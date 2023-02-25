@@ -95,9 +95,9 @@ export default {
     async readFile(file){
       let data;
       try{
-        data = await fetch('/'+file+'.json').then(r=>r.json());
-      } catch(e){
         data = await fetch('/scores/'+file+'.json').then(r=>r.json());
+      } catch(e){
+        data = await fetch('/'+file+'.json').then(r=>r.json());
       }
       if (data.type==='score' || !data.type){
         if (data.parts && data.bars){
