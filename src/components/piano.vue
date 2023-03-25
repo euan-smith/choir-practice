@@ -2,7 +2,20 @@
   import { MidiInstrument } from './instrument';
   function isWhite(pitch){
     const keys='wbwbwwbwbwbw';
-    return keys[pitch%12]==='w';
+    return keys[(pitch+120)%12]==='w';
+  }
+
+  function addKeys(pitch, keys){
+    if (keys>0){
+      for(let k=0;k<keys;k++){
+        while(!isWhite(++pitch)) /* intentionally empty */ ;
+      }
+    } else {
+      for(let k=0;k<-keys;k++){
+        while(!isWhite(--pitch)) /* intentionally empty */ ;
+      }
+    }
+    return pitch
   }
 
   export default {
@@ -17,7 +30,9 @@
         player: null,
         ready: false,
         sounds: {},
-        size:60,
+        size: 60,
+        centreKey: 60,
+        isDown: false,
       }
     },
     async mounted(){
@@ -52,16 +67,35 @@
         const {clientWidth, clientHeight} = this.$refs.keyboard;
         this.keys = Math.floor(clientWidth/this.size);
         const rows = Math.max(Math.floor(clientHeight/this.size/4+0.5),1);
-        this.rows=[];
+        this.rows = [];
+        let key = addKeys(this.centreKey, Math.floor((this.keys-1)*(rows-2)/2));
         for (let r=rows-1; r>-rows; r-=2){
-          const ri = Math.floor((r-1)*this.keys/1.6+59);
-          if (isWhite(ri)) this.rows.push(ri); else this.rows.push(ri-1);
+          this.rows.push(key);
+          key = addKeys(key, 1-this.keys)
         }
-        console.log([...this.rows], this.keys, rows);
+        // console.log([...this.rows], this.keys, rows);
       },
       scale(d){
         this.size+=d*5;
         this.resize();
+      },
+      down(pitch){
+        this.isDown=true;
+        this.sound(pitch);
+      },
+      enter(pitch){
+
+      },
+      leave(pitch){
+        if (this.isDown){
+          this.stop(pitch);
+        }
+      },
+      up(pitch){
+        if (this.isDown){
+          this.stop(pitch);
+          this.isDown=false;
+        }
       },
       sound(pitch){
         if (pitch && this.ready){
@@ -82,41 +116,43 @@
 <template>
   <div class=keyboard ref="keyboard">
     <div class=toolbar>
-      <div class=scale @click="scale(+1)"> >&lt; </div>
+      <div class=scale @click="scale(+1)"> + </div>
       <div class=close @click="$emit('close')">close</div>
-      <div class=scale @click="scale(-1)"> &lt;> </div>
+      <div class=scale @click="scale(-1)"> - </div>
     </div>
     <div v-for="board of keyMap" class=board>
       <div class="blacks">
         <div class="key start" 
-          :class="{hide:!board[0][0]}"
+          :class="{hide:!board[0][0] || board[0][0]<21 || board[0][0]>108}"
           :style="`margin-right:${20/keys}%`"
           ></div>
         <div 
           v-for="key of board[0].slice(1,board[0].length-1)" 
-          class="key" :class="{hide:!key}"
+          class="key" :class="{hide:!key || key<21 || key>108}"
           :style="`margin: 0 ${20/keys}%`"
           ><div class="touch"
-          @touchstart.prevent.stop="sound(key)"
-          @touchend.prevent.stop="stop(key)"
-          @mousedown="sound(key)"
-          @mouseleave="stop(key)"
-          @mouseup="stop(key)"
+            @touchstart.prevent.stop="down(key)"
+            @touchend.prevent.stop="up(key)"
+            @mousedown="down(key)"
+            @mouseleave="leave(key)"
+            @mouseenter="enter(key)"
+            @mouseup="up(key)"
           ></div></div>
         <div class="key end" 
-          :class="{hide:!board[0][board[0].length-1]}"
+          :class="{hide:!board[0][board[0].length-1] || board[0][board[0].length-1]<21 || board[0][board[0].length-1]>108}"
           :style="`margin-left:${20/keys}%`"
           ></div>
       </div>
       <div class="whites">
         <div v-for="key of board[1]" class="white key"
-          :class="{midc:key===60}"
-          @touchstart.prevent.stop="sound(key)"
-          @touchend.prevent.stop="stop(key)"
-          @mousedown="sound(key)"
-          @mouseleave="stop(key)"
-          @mouseup="stop(key)"
-          >{{key%12?'':key/12-1}}</div>
+          :class="{midc:key===60, hide:key<21 || key>108}"
+          @touchstart.prevent.stop="down(key)"
+          @touchend.prevent.stop="up(key)"
+             @mousedown="down(key)"
+             @mouseleave="leave(key)"
+             @mouseenter="enter(key)"
+             @mouseup="up(key)"
+          >{{key<21 || key>108 || key%12?'':key/12-1}}</div>
       </div>
     </div>
   </div>
@@ -141,6 +177,7 @@
     flex-direction: column;
     justify-content: stretch;
     background:#333;
+    user-select: none;
   }
   .board{
     flex:1 1 0;
@@ -169,13 +206,15 @@
   }
   .blacks>.key.start{
     flex:1 1 0;
-    margin-left:0
+    margin-left:0;
+    cursor:default;
   }
   .blacks>.key.end{
     flex:1 1 0;
     margin-right:0;
+    cursor:default;
   }
-  .blacks>.hide{
+  .hide{
     opacity:0;
   }
   .whites>.key{
@@ -187,6 +226,7 @@
     background:white;
     font-size: 1.5em;
     font-weight:bold;
+    cursor: pointer;
   }
   .whites>.midc{
     background:#aaa;
