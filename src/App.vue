@@ -145,7 +145,7 @@ export default {
   </div>
   <div v-if=showScore class=container>
     <div class=border>
-      <mixer @piano="showPiano=true" class=mixer :parts=score.parts :title=fullTitle :bars=score.bars :show-next=showNext :show-prev=showPrev @next=++index @prev=--index />
+      <mixer @piano="showPiano=!showPiano" class=mixer :parts=score.parts :title=fullTitle :bars=score.bars :show-next=showNext :show-prev=showPrev @next=++index @prev=--index />
     </div>
   </div>
   <div v-else-if=!ready />
