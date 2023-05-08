@@ -108,3 +108,47 @@ npm run build
 The playback speed of a sound file can easily be changed, unfortunately this also changes the pitch, and correcting that pitch change is not simple.  A few attempts have been made, none of them satisfactory.  The approach taken currently is to store several alternate versions of a score with different speeds.
 
 There are three potential solutions to this.  First the facility to natively fix this in the audio API might become available, after all this is possible through the `<audio>` HTML5 control so the browsers know how to do this.  A second solution might be to find a suitable means of playing either Midi or musescore files natively.  Finally some bright spark might find a way to get the Audio API to do this right - this seems the furthest out as there have definitely been attempts but none have been particularly satisfactory.
+
+# Current status and new features
+
+There have been some major changes and this readme has not kept up with them.
+
+Most roadmap features have been implemented.  The issue with playback speed was solved by using midi files as source rather than mp3, which then required support for instrument sound fonts.
+Initially a wave sequencer was used for sounds other than the piano, however that seemed too much for many lower spec phones.  It still supports such sound fonts, however the main
+sources are mp3-based sound fonts.  Two are included, piano and choral aah, which is enough for now.  This should be added to the score file explicitly.
+
+A piano has also been added, where you can flick to a keyboard to play some initial notes.
+
+So, new features to add:
+- One-touch chords on the piano (a note/major/minor cycle button).  Possibly a hold pedal as well.
+- include a definition of instruments in the score, to specify sound font files if needed.
+- improved handling of updating scores
+
+## update
+This last point has been sorted, I hope, via cloudfront configuration.  A policy has been added
+so have a cache of an hour at cloudfront, and to set browser headings so that the top level .html file
+and .json files can't be locally cached, but everything else can.  Peeking at the file loading through
+chrome tools it seems that it is not universally applied, but enough.  The json files have a
+max age of 0, whereas .mid or .mp3 files have a max age of a week and are immutable.  So, all that should
+work, at least for the score files.
+
+If anything more fine-grained is needed at cloudfront I can add different behaviours for specific file types.
+The headers for the browser are controlled via a js function, so I can do what I like there.
+
+## enabling others to update scores
+
+OK, so the feature I really want to figure out is how to enable others to upload scores.  Some user stories
+- The choir master can upload a new midi file, create a score file, and share a link
+- The choir master can edit an existing score file
+- The choir master can create or update a performance (score set) file
+
+so, some thought on features to enable
+- There is the possibility for storing credentials in browser storage (local storage) enabling writing to the scores S3 bucket.
+- There will be new controls added to the score list screen to be able to add, remove or edit scores
+- if the credentials are there then the score list will be generated directly from S3
+- There will be new controls to add, remove a score list
+- When viewing a score list there will be controls to add or remove scores within that list
+- There will be a page for editing a score
+- The page for editing a score will allow upload of midi and mp3 files, which will have a hash inserted in the file name
+- The timing JSON object can be generated.
+- If possible, a score will be edited using VexFlow

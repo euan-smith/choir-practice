@@ -1,4 +1,5 @@
 <script>
+  import {s3} from './aws';
   export default {
     props:{
       perfs:{

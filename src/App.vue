@@ -15,6 +15,7 @@
 import Mixer from './components/mixer.vue';
 import Selector from './components/selector.vue';
 import Piano from './components/piano.vue';
+import {search} from './components/options';
 export default {
   components:{
     Mixer,
@@ -118,19 +119,18 @@ export default {
   },
   async mounted(){
     this.readScores();
-    if (window.location.search){
-      const q = window.location.search.slice(1).split('&').map(s=>s.split('=')).reduce((o,d)=>Object.assign(o,{[d[0]]:d[1]}),{});
-      if (q.score){
+    if (search){
+      if (search.score){
         try{
-          const data = await this.readFile(q.score);
+          const data = await this.readFile(search.score);
           if (data.scores && data.title){
             this.title = data.title;
             this.scores = data.scores;
-          } else this.error = [`Invlid score "${q.score}"`];
+          } else this.error = [`Invlid score "${search.score}"`];
         } catch(e){
           console.log(e);
-          this.error = [`Unable to load score "${q.score}"`];
-          this.removeScore(q.score);
+          this.error = [`Unable to load score "${search.score}"`];
+          this.removeScore(search.score);
         }
       }
     }
