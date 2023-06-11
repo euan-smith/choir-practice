@@ -142,6 +142,10 @@ function getGain(url){
   return 4.0;
 }
 
+function canLoop(url){
+  return url !== PIANO;
+}
+
 export class MidiInstrument{
   static buffers=new Map();
   static players=new Map();
@@ -173,7 +177,7 @@ export class MidiInstrument{
       player.connect(dest);
       player.play = player.start;
     } else {
-      player = samplePlayer(ac, b, {loop:true, gain:getGain(url)});
+      player = samplePlayer(ac, b, {loop:canLoop(url), gain:getGain(url)});
       player.connect(dest);
     }
 
