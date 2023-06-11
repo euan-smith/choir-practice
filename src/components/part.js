@@ -16,8 +16,9 @@ export class PartSource{
   static canSetSpeed(url){
     return this.getClass(url).canSetSpeed;
   }
-  constructor(url){
+  constructor(url, name){
     this.url=url;
+    this.name = name;
     let q;
     [this.file,q] = url.split('?');
     this.query = !q ? {} : q.split('&')
@@ -66,8 +67,8 @@ export class PartSource{
 
 export class AudioPartSource extends PartSource{
   static canSetSpeed = false;
-  constructor(url){
-    super(url);
+  constructor(url, name){
+    super(url, name);
     this.buffer = null;
     this.decoded = false;
     this.source = null;
@@ -118,8 +119,8 @@ export class MidiPartSource extends PartSource{
     const midi = new MIDIFile(b);
     return midi.parseSong();
   }
-  constructor(url){
-    super(url);
+  constructor(url, name){
+    super(url, name);
     // console.log(url,this.query);
     this.trackIndex = +this.query.track;
     this.overrideProg = this.query.hasOwnProperty('prog');
@@ -150,14 +151,7 @@ export class MidiPartSource extends PartSource{
     while (noteIdx<notes.length && (notes[noteIdx].when+notes[noteIdx].duration)<from) noteIdx++;
     const susNotes=[];
     const play = (p,w,d)=>{
-      // if (this.inst===53) console.log(p,w,d,JSON.stringify(this.instrument.playing));
       this.instrument.play(p,w).stop(w+d);
-      // if (this.inst===53) console.log(JSON.stringify(this.instrument.playing));
-      // this.instrument.play(p, w).stop(w+Math.min(d,3));
-      // while (this.track.program>10 && d>3){
-      //   d-=3; w+=3;
-      //   this.instrument.play(p, w,{attack:0.3}).stop(w+Math.min(d,3));
-      // }
     }
     while(!this.stopping){
       const now = ac.currentTime*speed - offset;
