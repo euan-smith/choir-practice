@@ -1,11 +1,14 @@
 import {hash} from './options';
 import aws from 'aws-sdk';
+import {encryptData, decryptData} from "./encrypt";
+
 window.global = window;
-let accessKey, secretKey, region='eu-west-2', bucket='';
+let accessKey, secretKey;
 export let s3 = null;
 export let hasS3 = false;
 const pw = 'choir-practice';
 const Bucket = 'choir-scores';
+const region='eu-west-2';
 
 const listObjects = (params) => new Promise((res,rej)=>s3.listObjectsV2(params,(e,d)=>{if(e) rej(e); else res(d)}));
 
@@ -25,8 +28,7 @@ window.listFiles = listFiles;
 
 async function readKeys(){
   if (
-    await extractKeys(hash?.storage, true)
-    || await extractKeys(localStorage.getItem('storage'))
+    await extractKeys(hash?.storage, 'storage')
   ){
     try{
       aws.config.update({
@@ -47,107 +49,41 @@ async function readKeys(){
   }
 }
 
-async function extractKeys(s, store){
-  if(s){
-    try {
-      const ds = await decryptData(s, pw);
-      [accessKey, secretKey] = ds.split(',');
-      const OK = !!(accessKey && secretKey);
-      if (OK && store){
-        localStorage.setItem('storage',s);
-      }
-      return OK;
-    } catch(e){}
+/**
+ * If supplied with a string will try and decrypt a key set from it and if successful store those keys in local storage
+ * otherwise it will attempt to extract from local storage.  Returns true if either is successful.
+ * @param packedKeys {string?} encrypted key bundle or falsy if there is none
+ * @param store {string} the name of the local storage key to use
+ * @returns {Promise<boolean>} resolves to true of S3 keys were set
+ */
+async function extractKeys(packedKeys, store){
+  if (packedKeys && await extractAndCheck(packedKeys)){
+    if (store){
+      localStorage.setItem(store,packedKeys);
+    }
+  } else if (store) {
+    return extractAndCheck(localStorage.getItem(store))
   }
+}
+
+/**
+ * Tries to extract and set the keys for S3 access
+ * @param packedKeys {string?} encrypted key bundle
+ * @returns {Promise<boolean>} resolves to true if extraction is successful
+ */
+async function extractAndCheck(packedKeys){
+  if (packedKeys){
+    try {
+      const ds = await decryptData(packedKeys, pw);
+      [accessKey, secretKey] = ds.split(',');
+      return !!(accessKey && secretKey);
+    } catch(e){ }
+  }
+  return false;
 }
 
 window.getStorageHash = async function(access,secret){
   console.log('#storage='+await encryptData(access+','+secret,pw));
-}
-
-// for large strings, use this from https://stackoverflow.com/a/49124600
-const buff_to_base64 = (buff) => btoa(
-  new Uint8Array(buff).reduce(
-    (data, byte) => data + String.fromCharCode(byte), ''
-  )
-);
-
-const base64_to_buf = (b64) =>
-  Uint8Array.from(atob(b64), (c) => c.charCodeAt(null));
-
-const enc = new TextEncoder();
-const dec = new TextDecoder();
-
-
-const getPasswordKey = (password) =>
-  window.crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, [
-    "deriveKey",
-  ]);
-
-const deriveKey = (passwordKey, salt, keyUsage) =>
-  window.crypto.subtle.deriveKey(
-    {
-      name: "PBKDF2",
-      salt: salt,
-      iterations: 250000,
-      hash: "SHA-256",
-    },
-    passwordKey,
-    { name: "AES-GCM", length: 256 },
-    false,
-    keyUsage
-  );
-
-async function encryptData(secretData, password) {
-  try {
-    const salt = window.crypto.getRandomValues(new Uint8Array(16));
-    const iv = window.crypto.getRandomValues(new Uint8Array(12));
-    const passwordKey = await getPasswordKey(password);
-    const aesKey = await deriveKey(passwordKey, salt, ["encrypt"]);
-    const encryptedContent = await window.crypto.subtle.encrypt(
-      {
-        name: "AES-GCM",
-        iv: iv,
-      },
-      aesKey,
-      enc.encode(secretData)
-    );
-
-    const encryptedContentArr = new Uint8Array(encryptedContent);
-    let buff = new Uint8Array(
-      salt.byteLength + iv.byteLength + encryptedContentArr.byteLength
-    );
-    buff.set(salt, 0);
-    buff.set(iv, salt.byteLength);
-    buff.set(encryptedContentArr, salt.byteLength + iv.byteLength);
-    return buff_to_base64(buff);
-  } catch (e) {
-    console.log(`Error - ${e}`);
-    return "";
-  }
-}
-
-async function decryptData(encryptedData, password) {
-  try {
-    const encryptedDataBuff = base64_to_buf(encryptedData);
-    const salt = encryptedDataBuff.slice(0, 16);
-    const iv = encryptedDataBuff.slice(16, 16 + 12);
-    const data = encryptedDataBuff.slice(16 + 12);
-    const passwordKey = await getPasswordKey(password);
-    const aesKey = await deriveKey(passwordKey, salt, ["decrypt"]);
-    const decryptedContent = await window.crypto.subtle.decrypt(
-      {
-        name: "AES-GCM",
-        iv: iv,
-      },
-      aesKey,
-      data
-    );
-    return dec.decode(decryptedContent);
-  } catch (e) {
-    console.log(`Error - ${e}`);
-    return "";
-  }
 }
 
 readKeys().then();
