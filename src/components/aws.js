@@ -1,8 +1,7 @@
 import {hash} from './options';
-import { S3Client, ListObjectsV2Command} from "@aws-sdk/client-s3";
+import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import {encryptData, decryptData} from "./encrypt";
 
-window.global = window;
 let accessKey, secretKey;
 export let s3 = null;
 export let hasS3 = false;
@@ -22,7 +21,24 @@ export async function listFiles(regex){
   return rtn.map(e=>e.Key);
 }
 
-window.listFiles = listFiles;
+export async function getFile(Key){
+  try {
+    const resp = await s3.send(new GetObjectCommand({Bucket, Key}));
+    return resp.Body.transformToString();
+  } catch(e) { return null}
+}
+
+export async function putFile(Key, Body){
+  return await s3.send(new PutObjectCommand({
+    Bucket,
+    Key,
+    Body
+  }))
+}
+
+export async function deleteFile(Key){
+  return await s3.send(new DeleteObjectCommand({Bucket, Key}))
+}
 
 async function readKeys(){
   if (
@@ -36,7 +52,6 @@ async function readKeys(){
           secretAccessKey: secretKey
         }
       })
-      window.s3=s3;
       hasS3 = !!s3;
     } catch(e){
       console.log('error with s3',e)
