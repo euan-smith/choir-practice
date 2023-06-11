@@ -1,5 +1,5 @@
 import {hash} from './options';
-import aws from 'aws-sdk';
+import { S3Client, ListObjectsV2Command} from "@aws-sdk/client-s3";
 import {encryptData, decryptData} from "./encrypt";
 
 window.global = window;
@@ -10,14 +10,12 @@ const pw = 'choir-practice';
 const Bucket = 'choir-scores';
 const region='eu-west-2';
 
-const listObjects = (params) => new Promise((res,rej)=>s3.listObjectsV2(params,(e,d)=>{if(e) rej(e); else res(d)}));
-
 export async function listFiles(regex){
-  let list = await listObjects({Bucket});
+  let list = await s3.send(new ListObjectsV2Command({Bucket}));
   let rtn = list.Contents;
   while (list.IsTruncated){
     const {ContinuationToken} = list;
-    let list = await listObjects({Bucket, ContinuationToken});
+    list = await s3.send(new ListObjectsV2Command({Bucket, ContinuationToken}));
     rtn = rtn.concat(list.Contents);
   }
   if (regex) rtn = rtn.filter(e=>regex.test(e.Key));
@@ -31,13 +29,12 @@ async function readKeys(){
     await extractKeys(hash?.storage, 'storage')
   ){
     try{
-      aws.config.update({
-        secretAccessKey:secretKey,
-        accessKeyId: accessKey
-      })
-      s3 = new aws.S3({
-        signatureVersion: 'v4',
-        region
+      s3 = new S3Client({
+        region,
+        credentials:{
+          accessKeyId: accessKey,
+          secretAccessKey: secretKey
+        }
       })
       window.s3=s3;
       hasS3 = !!s3;

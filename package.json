@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.350.0",
     "audio-loader": "^0.5.0",
     "aws-sdk": "^2.1373.0",
     "axios": "^1.4.0",
