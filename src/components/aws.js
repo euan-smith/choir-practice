@@ -1,13 +1,29 @@
 import {hash} from './options';
 import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import {encryptData, decryptData} from "./encrypt";
+import {ref} from 'vue';
 
 let accessKey, secretKey;
 export let s3 = null;
-export let hasS3 = false;
+export const hasS3 = ref(false);
+export const s3scores = ref([]);
+export const s3sets = ref([]);
 const pw = 'choir-practice';
 const Bucket = 'choir-scores';
 const region='eu-west-2';
+
+export async function dir(){
+  const files = await listFiles(/\.json$/);
+  s3scores.value=[];
+  s3sets.value=[];
+  for(let file of files.sort((a,b)=>b.LastModified-a.LastModified)){
+    try{
+      const score = JSON.parse(await getFile(file.Key));
+      if (score.type==='performance')s3sets.value.push({file, set:score});
+      else s3scores.value.push({file,score});
+    } catch(e){}
+  }
+}
 
 export async function listFiles(regex){
   let list = await s3.send(new ListObjectsV2Command({Bucket}));
@@ -18,7 +34,7 @@ export async function listFiles(regex){
     rtn = rtn.concat(list.Contents);
   }
   if (regex) rtn = rtn.filter(e=>regex.test(e.Key));
-  return rtn.map(e=>e.Key);
+  return rtn;
 }
 
 export async function getFile(Key){
@@ -52,7 +68,7 @@ async function readKeys(){
           secretAccessKey: secretKey
         }
       })
-      hasS3 = !!s3;
+      hasS3.value = !!s3;
     } catch(e){
       console.log('error with s3',e)
     }
