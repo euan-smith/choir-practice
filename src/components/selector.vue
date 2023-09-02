@@ -95,8 +95,8 @@
         console.log(perf);
         switch(this.state){
           case NONE:
-            await this.$parent.readFile(perf);
             this.selected = this.selected===perf ? null : perf;
+            if (this.selected) await this.$parent.readFile(perf);
             break;
           case CAT:
           case PERF_EDIT:

@@ -32,6 +32,7 @@ export default {
       index:0,
       ready:false,
       showPiano:false,
+      files:new Map(),
     }
   },
   computed:{
@@ -95,6 +96,7 @@ export default {
     },
     async readFile(file){
       let data;
+      if (this.files.has(file)) return this.files.get(file);
       try{
         data = await fetch('/scores/'+file+'.json').then(r=>r.json());
       } catch(e){
@@ -108,12 +110,14 @@ export default {
           }
         }
         this.addScore(file, data.title);
+        this.files.set(file,data);
         return data;
       } else if (data.type==='performance'){
         this.addPerf(file, data);
         for (let score of data.scores){
           await this.readFile(score);
         }
+        this.files.set(file,null);
       }
     },
   },
