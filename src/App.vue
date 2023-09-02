@@ -140,6 +140,7 @@ export default {
 </script>
 
 <template>
+  <vue3-confirm-dialog></vue3-confirm-dialog>
   <div v-if=showPiano class=container>
     <piano @close="showPiano=false"></piano>
   </div>

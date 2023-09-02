@@ -2,6 +2,7 @@ import {hash} from './options';
 import { S3Client, ListObjectsV2Command, GetObjectCommand, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import {encryptData, decryptData} from "./encrypt";
 import {ref} from 'vue';
+import testData from './test-data';
 
 let accessKey, secretKey;
 export let s3 = null;
@@ -21,30 +22,67 @@ export async function dir(){
       const score = JSON.parse(await getFile(file.Key));
       if (score.type==='performance')s3sets.value.push({file, set:score});
       else s3scores.value.push({file,score});
-    } catch(e){}
+    } catch(e){
+      console.log('dir error', e)
+    }
   }
 }
 
 export async function listFiles(regex){
-  let list = await s3.send(new ListObjectsV2Command({Bucket}));
-  let rtn = list.Contents;
-  while (list.IsTruncated){
-    const {ContinuationToken} = list;
-    list = await s3.send(new ListObjectsV2Command({Bucket, ContinuationToken}));
-    rtn = rtn.concat(list.Contents);
+  if (window?.navigator && !navigator.onLine) return testData.files.filter(e=>regex.test(e.Key));
+  try {
+    let list = await s3.send(new ListObjectsV2Command({Bucket}));
+    let rtn = list.Contents;
+    while (list.IsTruncated) {
+      const {ContinuationToken} = list;
+      list = await s3.send(new ListObjectsV2Command({Bucket, ContinuationToken}));
+      rtn = rtn.concat(list.Contents);
+    }
+    if (regex) rtn = rtn.filter(e => regex.test(e.Key));
+    return rtn;
+  } catch(e){
+    window.lastError = e;
+    console.log('listFiles error',e);
+    return [];
   }
-  if (regex) rtn = rtn.filter(e=>regex.test(e.Key));
-  return rtn;
+}
+
+function findTestFile(key){
+  for (let n=0; n<testData.files.length; n++){
+    if (testData.files[n].Key === key) return testData.files[n].content;
+  }
+  return null;
 }
 
 export async function getFile(Key){
+  if (window?.navigator && !navigator.onLine){
+    return JSON.stringify(findTestFile(Key));
+  }
   try {
     const resp = await s3.send(new GetObjectCommand({Bucket, Key}));
-    return resp.Body.transformToString();
+    const content = await resp.Body.transformToString();
+    // console.log(Key, content);
+    return content;
   } catch(e) { return null}
 }
 
 export async function putFile(Key, Body){
+  if (window?.navigator && !navigator.onLine){
+    // console.log('put', Key, Body, testData.files)
+    let file = findTestFile(Key);
+    if (file){
+      file.content = JSON.parse(Body);
+      file.LastModified = new Date();
+    } else {
+      testData.files.push({
+        Key,
+        content:JSON.parse(Body),
+        LastModified:new Date()
+      })
+    }
+    // console.log('post put', testData.files);
+    return;
+  }
   return await s3.send(new PutObjectCommand({
     Bucket,
     Key,
@@ -53,6 +91,9 @@ export async function putFile(Key, Body){
 }
 
 export async function deleteFile(Key){
+  if (window?.navigator && !navigator.onLine) {
+    testData.files = testData.files.filter(f=>f.Key!==Key);
+  }
   return await s3.send(new DeleteObjectCommand({Bucket, Key}))
 }
 
