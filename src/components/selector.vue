@@ -91,10 +91,11 @@
             this.inPerf = false;
         }
       },
-      perfClick(perf){
+      async perfClick(perf){
         console.log(perf);
         switch(this.state){
           case NONE:
+            await this.$parent.readFile(perf);
             this.selected = this.selected===perf ? null : perf;
             break;
           case CAT:

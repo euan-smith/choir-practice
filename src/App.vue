@@ -70,7 +70,7 @@ export default {
       } catch(e){}
     },
     writeScores(){
-      console.log({...this.scoreList});
+      //console.log({...this.scoreList});
       localStorage.setItem('scores',JSON.stringify(this.scoreList));
       localStorage.setItem('perfs',JSON.stringify(this.perfList));
     },
@@ -126,7 +126,7 @@ export default {
           if (data.scores && data.title){
             this.title = data.title;
             this.scores = data.scores;
-          } else this.error = [`Invlid score "${search.score}"`];
+          } else this.error = [`Invalid score "${search.score}"`];
         } catch(e){
           console.log(e);
           this.error = [`Unable to load score "${search.score}"`];
