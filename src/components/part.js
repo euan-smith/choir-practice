@@ -151,6 +151,7 @@ export class MidiPartSource extends PartSource{
     while (noteIdx<notes.length && (notes[noteIdx].when+notes[noteIdx].duration)<from) noteIdx++;
     const susNotes=[];
     const play = (p,w,d)=>{
+      if (d<=0) return;
       this.instrument.play(p,w).stop(w+d);
     }
     while(!this.stopping){
