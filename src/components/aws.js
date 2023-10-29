@@ -12,12 +12,14 @@ export const s3sets = ref([]);
 const pw = 'choir-practice';
 const Bucket = 'choir-scores';
 const region='eu-west-2';
+export const musicFiles = ref([]);
 
 export async function dir(){
+  const sortFn = (a,b)=>b.LastModified-a.LastModified;
   const files = await listFiles(/\.json$/);
   s3scores.value=[];
   s3sets.value=[];
-  for(let file of files.sort((a,b)=>b.LastModified-a.LastModified)){
+  for(let file of files.sort(sortFn)){
     try{
       const score = JSON.parse(await getFile(file.Key));
       if (score.type==='performance')s3sets.value.push({file, set:score});
@@ -26,6 +28,9 @@ export async function dir(){
       console.log('dir error', e)
     }
   }
+  const music = await listFiles(/\.(mid|midi|mp3)$/);
+  musicFiles.value=music.sort(sortFn).map(f=>f.Key);
+  console.log(musicFiles.value);
 }
 
 export async function listFiles(regex){
