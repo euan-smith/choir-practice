@@ -542,7 +542,7 @@ export class MIDIFile {
     for (var i = 0; i < track.notes.length; i++) {
       if (track.notes[i].duration == 0.0000001 //
         && track.notes[i].pitch == event.param1 //
-        && track.notes[i].when < event.playTime / 1000) {
+        && track.notes[i].when <= event.playTime / 1000) {
         track.notes[i].duration = event.playTime / 1000 - track.notes[i].when;
         break;
       }
