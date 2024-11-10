@@ -85,6 +85,9 @@ export default {
       this.perfList[name]=def;
       this.writeScores();
     },
+    menu(){
+      location='?';
+    },
     removePerf(name){
       delete this.perfList[name];
       this.writeScores();
@@ -145,7 +148,7 @@ export default {
   </div>
   <div v-if=showScore class=container>
     <div class=border>
-      <mixer @piano="showPiano=!showPiano" class=mixer :parts=score.parts :title=fullTitle :bars=score.bars :show-next=showNext :show-prev=showPrev @next=++index @prev=--index />
+      <mixer @piano="showPiano=!showPiano" class=mixer :parts=score.parts :title=fullTitle :bars=score.bars :show-next=showNext :show-prev=showPrev @next=++index @prev=--index @menu=menu />
     </div>
   </div>
   <div v-else-if=!ready />

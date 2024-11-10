@@ -392,6 +392,9 @@ export default {
       this.pause();
       this.$emit('prev');
     },
+    menu(){
+      this.$emit('menu');
+    },
     reset(){
       console.log(this.$refs.mutes);
       for(let n=0; n<this.parts.length; n++) {
@@ -607,6 +610,7 @@ export default {
       />
       <svg v-if="showNext" class="next icon" viewBox="0 0 48 48" @click="next"><path d="M34 36V12h3v24Zm-23 0V12l17.3 12Z"/></svg>
       <svg v-if="showPrev" class="prev icon" viewBox="0 0 48 48" @click="prev"><path d="M11 36V12h3v24Zm26 0L19.7 24 37 12Z"/></svg>
+      <svg v-else class="prev icon" viewBox="0 -1060 1160 1160" @click="menu"><path d="m313-440 224 224-57 56-320-320 320-320 57 56-224 224h487v80H313Z"/></svg>
     </div>
   </div>
 </template>
